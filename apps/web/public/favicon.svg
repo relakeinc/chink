@@ -1,0 +1,29 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="48" height="48" rx="10" fill="#F5F5EF"/>
+  <g stroke="#242722" stroke-width="3" stroke-linecap="round">
+    <path d="M24 24L41 24"/>
+    <path d="M35.5 24L38.6 26.6"/>
+    <path d="M35.5 24L38.6 21.4"/>
+    <path d="M24 24L36 36"/>
+    <path d="M32.1 32.1L32.5 36.1"/>
+    <path d="M32.1 32.1L36.1 32.5"/>
+    <path d="M24 24L24 41"/>
+    <path d="M24 35.5L21.4 38.6"/>
+    <path d="M24 35.5L26.6 38.6"/>
+    <path d="M24 24L12 36"/>
+    <path d="M15.9 32.1L11.9 32.5"/>
+    <path d="M15.9 32.1L15.5 36.1"/>
+    <path d="M24 24L7 24"/>
+    <path d="M12.5 24L9.4 26.6"/>
+    <path d="M12.5 24L9.4 21.4"/>
+    <path d="M24 24L12 12"/>
+    <path d="M15.9 15.9L15.5 11.9"/>
+    <path d="M15.9 15.9L11.9 15.5"/>
+    <path d="M24 24L24 7"/>
+    <path d="M24 12.5L21.4 9.4"/>
+    <path d="M24 12.5L26.6 9.4"/>
+    <path d="M24 24L36 12"/>
+    <path d="M32.1 15.9L36.1 15.5"/>
+    <path d="M32.1 15.9L32.5 11.9"/>
+  </g>
+</svg>
