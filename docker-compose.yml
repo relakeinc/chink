@@ -1,0 +1,45 @@
+# chink-saas en producción.
+# Uso:
+#   1. cp .env.example .env y completa secretos (POSTGRES_PASSWORD, JWT_SECRET, R2, SMTP).
+#      En el VPS, SMTP_HOST=172.17.0.1 y SMTP_PORT=587.
+#   2. docker compose up -d --build
+#   3. El frontend se compila aparte (pnpm install && pnpm build) y lo sirve
+#      nginx (ver nginx/chink.relake.co.conf) desde apps/web/dist.
+name: chink-saas
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chinksaas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-chinksaas}
+    volumes:
+      - chink-saas-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-chinksaas} -d $${POSTGRES_DB:-chinksaas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-chinksaas}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-chinksaas}?schema=public
+      PORT: "3100"
+      HOST: "0.0.0.0"
+    ports:
+      # El 3100 del host lo ocupa otro proyecto: se expone en 3101 solo a localhost.
+      - "127.0.0.1:3101:3100"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  chink-saas-pgdata:
