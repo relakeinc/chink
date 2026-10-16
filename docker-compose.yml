@@ -35,8 +35,9 @@ services:
       PORT: "3100"
       HOST: "0.0.0.0"
     ports:
-      # El 3100 del host lo ocupa otro proyecto: se expone en 3101 solo a localhost.
-      - "127.0.0.1:3101:3100"
+      # El 3100 del host lo ocupa otro proyecto y el 3101 lautch-app-web:
+      # se expone en 3102 solo a localhost.
+      - "127.0.0.1:3102:3100"
     depends_on:
       db:
         condition: service_healthy
