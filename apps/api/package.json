@@ -18,12 +18,14 @@
     "@fastify/jwt": "^9.0.4",
     "bcryptjs": "^2.4.3",
     "fastify": "^5.2.1",
-    "nodemailer": "^10.1.1"
+    "nodemailer": "^10.1.1",
+    "pdfkit": "^0.20.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.7",
     "@types/nodemailer": "^8.0.2",
+    "@types/pdfkit": "^0.17.6",
     "dotenv-cli": "^7.4.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"

@@ -7,10 +7,15 @@
  *   alertas        pz@alerts.relake.co
  *   reportes       pz@reports.relake.co
  *
+ * Diseño tipo newsletter (600 px, tablas, estilos en línea: los clientes de
+ * correo no soportan flexbox). Los SVG no se ven en los correos, así que el
+ * logo y el icono van en PNG incrustados por CID desde assets/email/.
+ *
  * Sin SMTP_HOST/SMTP_USER/SMTP_PASS el envío lanza error: quien llama decide
  * si el correo es crítico (falla la operación) o accesorio (sigue y avisa).
  */
 
+import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 
@@ -57,12 +62,56 @@ export function fromAddress(category: EmailCategory): string {
   return FROM[category];
 }
 
+/* ---------------------------------------------------------- Adjuntos CID */
+
+const MARK_IDS = [
+  "workspace-mark",
+  "workspace-violet",
+  "workspace-teal",
+  "workspace-moss",
+  "workspace-ember",
+  "workspace-sky",
+  "workspace-rose",
+  "workspace-bronze",
+] as const;
+
+function assetPath(filename: string): string {
+  return fileURLToPath(new URL(`../../assets/email/${filename}`, import.meta.url));
+}
+
+function safeMarkId(mark: string | null | undefined): string {
+  return (MARK_IDS as readonly string[]).includes(mark ?? "") ? (mark as string) : "workspace-mark";
+}
+
+export interface EmailAssets {
+  attachments: { filename: string; path: string; cid: string }[];
+  markCid: string;
+  socialCids: { ig: string; fb: string; x: string; yt: string };
+}
+
+/** Icono del espacio + iconos sociales incrustados por CID. */
+export function emailAssets(mark: string | null | undefined): EmailAssets {
+  const id = safeMarkId(mark);
+  return {
+    attachments: [
+      { filename: `${id}.png`, path: assetPath(`${id}.png`), cid: `mark-${id}` },
+      { filename: "social-ig.png", path: assetPath("social-ig.png"), cid: "social-ig" },
+      { filename: "social-fb.png", path: assetPath("social-fb.png"), cid: "social-fb" },
+      { filename: "social-x.png", path: assetPath("social-x.png"), cid: "social-x" },
+      { filename: "social-yt.png", path: assetPath("social-yt.png"), cid: "social-yt" },
+    ],
+    markCid: `mark-${id}`,
+    socialCids: { ig: "social-ig", fb: "social-fb", x: "social-x", yt: "social-yt" },
+  };
+}
+
 interface SendEmailInput {
   category: EmailCategory;
   to: string | string[];
   subject: string;
   html: string;
   text?: string;
+  attachments?: Array<{ filename: string; path?: string; cid?: string; content?: Buffer; contentType?: string }>;
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<{ id: string }> {
@@ -72,77 +121,199 @@ export async function sendEmail(input: SendEmailInput): Promise<{ id: string }> 
     subject: input.subject,
     html: input.html,
     ...(input.text ? { text: input.text } : {}),
+    ...(input.attachments ? { attachments: input.attachments } : {}),
   });
   return { id: String(info.messageId ?? "") };
 }
 
 /* ------------------------------------------------------------ Plantillas */
 
-function layout(title: string, body: string): string {
-  return `<html><body style="margin:0;background:#f5f5ef;padding:24px;font-family:sans-serif;">
-    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px;">
-      <div style="font-size:15px;font-weight:700;color:#242722;margin-bottom:6px;">${title}</div>
-      <div style="font-size:13px;line-height:1.6;color:#41483a;">${body}</div>
-      <div style="margin-top:20px;font-size:11px;color:#74796f;">Chink · gestión de inventario</div>
-    </div>
-  </body></html>`;
+const FONT = "'DM Sans', Arial, Helvetica, sans-serif";
+
+/** Escapa texto de usuario antes de meterlo en el HTML. */
+function esc(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function button(url: string, label: string): string {
-  return `<div style="margin:18px 0;"><a href="${url}" style="display:inline-block;background:#cdfa63;color:#242722;font-weight:700;font-size:13px;padding:10px 18px;border-radius:8px;text-decoration:none;">${label}</a></div>`;
+interface ShellInput {
+  title: string;
+  preheader: string;
+  markCid: string;
+  socialCids: EmailAssets["socialCids"];
+  greeting?: string;
+  body: string;
+  credential?: string;
+  ctaUrl?: string;
+  ctaLabel?: string;
+  footerSpace: string;
+  footerWhy: string;
 }
 
-export function invitationEmail(input: { name: string; role: string; spaceName: string; temporaryPassword: string; resent?: boolean }): {
+/**
+ * Newsletter compacto estilo Lovable/Slack: 520 px, alineado a la izquierda,
+ * titular moderado, CTA oscuro en píldora y pie honesto con el motivo del envío.
+ */
+function shell(input: ShellInput): string {
+  const social = (cid: string, alt: string) =>
+    `<td align="center" style="padding:0 8px;"><img src="cid:${cid}" width="20" height="20" alt="${alt}" style="display:block;border:0;"></td>`;
+  return `<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${esc(input.title)}</title></head><body style="margin:0;padding:0;background:#f5f5ef;-webkit-text-size-adjust:100%;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(input.preheader)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5ef;padding:32px 0;">
+<tr><td align="center">
+<table role="presentation" width="520" cellpadding="0" cellspacing="0" style="width:520px;max-width:520px;background:#ffffff;border-radius:12px;">
+<tr><td style="padding:26px 36px 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td align="left" valign="middle" style="font-family:${FONT};font-size:24px;font-weight:800;color:#242722;letter-spacing:-0.5px;">Chink.</td>
+<td align="right" valign="middle"><img src="cid:${input.markCid}" width="30" height="30" alt="" style="display:block;border:0;"></td>
+</tr></table>
+</td></tr>
+${
+  input.greeting
+    ? `<tr><td style="padding:26px 36px 0;font-family:${FONT};font-size:14px;font-weight:700;color:#242722;">${esc(input.greeting)}</td></tr>`
+    : ""
+}
+<tr><td style="padding:10px 36px 0;font-family:${FONT};font-size:28px;font-weight:800;color:#242722;text-transform:uppercase;line-height:1.2;">${esc(input.title)}</td></tr>
+<tr><td style="padding:12px 36px 0;font-family:${FONT};font-size:14px;color:#41483a;line-height:1.65;">${input.body}</td></tr>
+${
+  input.credential
+    ? `<tr><td style="padding:16px 36px 0;"><span style="display:inline-block;border:1px solid #242722;border-radius:6px;padding:12px 24px;font-family:${FONT};font-size:18px;font-weight:700;letter-spacing:3px;color:#242722;">${esc(input.credential)}</span></td></tr>`
+    : ""
+}
+${
+  input.ctaUrl && input.ctaLabel
+    ? `<tr><td style="padding:22px 36px 0;"><a href="${input.ctaUrl}" style="display:inline-block;background:#242722;color:#f5f5ef;font-family:${FONT};font-weight:700;font-size:14px;padding:12px 28px;border-radius:999px;text-decoration:none;">${esc(input.ctaLabel)}</a></td></tr>`
+    : ""
+}
+<tr><td style="padding:22px 36px 0;font-family:${FONT};font-size:14px;color:#41483a;line-height:1.65;">Saludos,<br><strong>El equipo Chink</strong></td></tr>
+<tr><td align="center" style="padding:30px 36px 8px;font-family:${FONT};font-size:11px;color:#74796f;line-height:1.6;">${esc(input.footerWhy)}</td></tr>
+<tr><td align="center" style="padding:0 36px 6px;">
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
+${social(input.socialCids.ig, "Instagram")}${social(input.socialCids.fb, "Facebook")}${social(input.socialCids.x, "X")}${social(input.socialCids.yt, "YouTube")}
+</tr></table>
+</td></tr>
+<tr><td align="center" style="padding:10px 36px 30px;font-family:${FONT};font-size:11px;color:#74796f;">Chink · gestión de inventario — ${esc(input.footerSpace)}</td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
+export interface TemplateOutput {
   subject: string;
   html: string;
   text: string;
-} {
-  const title = input.resent ? `Nueva clave para entrar a ${input.spaceName}` : `Te invitaron a ${input.spaceName}`;
-  const intro = input.resent
-    ? `Hola ${input.name}, te generamos una <strong>nueva clave temporal</strong> porque la anterior se reenvió.`
-    : `Hola ${input.name}, te invitaron al espacio <strong>${input.spaceName}</strong> con el rol <strong>${input.role}</strong>.`;
-  const body = `${intro}<br><br>Tu clave temporal es: <strong style="font-size:16px;">${input.temporaryPassword}</strong><br>Cámbiala cuando entres desde Configuración → Seguridad.${button(`${APP_URL}/login`, "Entrar a Chink")}`;
+}
+
+export function invitationEmail(input: { name: string; role: string; spaceName: string; temporaryPassword: string; mark: string; resent?: boolean }): TemplateOutput {
+  const assets = emailAssets(input.mark);
+  const title = input.resent ? `Nueva clave para ${input.spaceName}` : `Te invitaron a ${input.spaceName}`;
+  const html = shell({
+    title,
+    preheader: `Tu clave temporal para entrar a ${input.spaceName}`,
+    markCid: assets.markCid,
+    socialCids: assets.socialCids,
+    greeting: `Hola ${esc(input.name)},`,
+    body: input.resent
+      ? `Te generamos una <strong>nueva clave temporal</strong> porque la anterior se reenvió. Cámbiala cuando entres desde Configuración → Seguridad.`
+      : `Te invitaron al espacio <strong>${esc(input.spaceName)}</strong> con el rol <strong>${esc(input.role)}</strong>. Cámbiala cuando entres desde Configuración → Seguridad.`,
+    credential: input.temporaryPassword,
+    ctaUrl: `${APP_URL}/login`,
+    ctaLabel: "Entrar a Chink",
+    footerSpace: input.spaceName,
+    footerWhy: `Recibiste este correo porque te invitaron a ${input.spaceName}.`,
+  });
   return {
     subject: title,
-    html: layout(title, body),
+    html,
     text: `${title}. Clave temporal: ${input.temporaryPassword}. Entra en ${APP_URL}/login`,
   };
 }
 
-export function lowStockEmail(input: { product: string; sku: string; stock: number; minStock: number; spaceName: string }): {
-  subject: string;
-  html: string;
-  text: string;
-} {
-  const title = `Stock bajo: ${input.product}`;
-  const body = `El producto <strong>${input.product}</strong> (${input.sku}) quedó en <strong>${input.stock} u.</strong>, por debajo de su mínimo de ${input.minStock} u. en ${input.spaceName}.${button(`${APP_URL}/inventario`, "Ver inventario")}`;
+/**
+ * Aviso a quien ya es miembro: sin clave temporal (entra con la suya) y sin
+ * tocar su cuenta. Solo informa de la nueva invitación a un espacio/rol.
+ */
+export function invitationExistingEmail(input: { name: string; role: string; spaceName: string; mark: string }): TemplateOutput {
+  const assets = emailAssets(input.mark);
+  const title = `Te añadieron a ${input.spaceName}`;
+  const html = shell({
+    title,
+    preheader: `Te añadieron al espacio ${input.spaceName}`,
+    markCid: assets.markCid,
+    socialCids: assets.socialCids,
+    greeting: `Hola ${esc(input.name)},`,
+    body: `Te añadieron al espacio <strong>${esc(input.spaceName)}</strong> con el rol <strong>${esc(input.role)}</strong>.<br>Como ya tienes cuenta, entra con tu contraseña habitual; no necesitas hacer nada más.`,
+    ctaUrl: `${APP_URL}/login`,
+    ctaLabel: "Entrar a Chink",
+    footerSpace: input.spaceName,
+    footerWhy: `Recibiste este correo porque te añadieron a ${input.spaceName}.`,
+  });
   return {
     subject: title,
-    html: layout(title, body),
+    html,
+    text: `${title}. Entra con tu contraseña habitual en ${APP_URL}/login`,
+  };
+}
+
+export function lowStockEmail(input: { product: string; sku: string; stock: number; minStock: number; spaceName: string; mark: string }): TemplateOutput {
+  const assets = emailAssets(input.mark);
+  const title = `Stock bajo: ${input.product}`;
+  const html = shell({
+    title,
+    preheader: `${input.product} quedó en ${input.stock} u. (mínimo ${input.minStock})`,
+    markCid: assets.markCid,
+    socialCids: assets.socialCids,
+    body: `El producto <strong>${esc(input.product)}</strong> (${esc(input.sku)}) quedó en <strong>${input.stock} u.</strong>, por debajo de su mínimo de ${input.minStock} u. en ${esc(input.spaceName)}.`,
+    ctaUrl: `${APP_URL}/inventario`,
+    ctaLabel: "Ver inventario",
+    footerSpace: input.spaceName,
+    footerWhy: `Recibiste este correo por la alerta de stock bajo de ${input.spaceName}.`,
+  });
+  return {
+    subject: title,
+    html,
     text: `${title}. Stock: ${input.stock} u., mínimo: ${input.minStock} u. Revisa en ${APP_URL}/inventario`,
   };
 }
 
-export function passwordChangedEmail(input: { name: string }): { subject: string; html: string; text: string } {
+export function passwordChangedEmail(input: { name: string; spaceName: string; mark: string }): TemplateOutput {
+  const assets = emailAssets(input.mark);
   const title = "Cambiaste tu contraseña";
-  const body = `Hola ${input.name}, tu contraseña de Chink se actualizó correctamente.<br>Si no fuiste tú, avisa a tu administración cuanto antes.${button(`${APP_URL}/login`, "Entrar a Chink")}`;
+  const html = shell({
+    title,
+    preheader: "Tu contraseña de Chink se actualizó",
+    markCid: assets.markCid,
+    socialCids: assets.socialCids,
+    greeting: `Hola ${esc(input.name)},`,
+    body: `Tu contraseña de Chink se actualizó correctamente.<br>Si no fuiste tú, avisa a tu administración cuanto antes.`,
+    ctaUrl: `${APP_URL}/login`,
+    ctaLabel: "Entrar a Chink",
+    footerSpace: input.spaceName,
+    footerWhy: `Aviso de seguridad de tu cuenta en ${input.spaceName}.`,
+  });
   return {
     subject: title,
-    html: layout(title, body),
+    html,
     text: `${title}. Si no fuiste tú, avisa a tu administración. ${APP_URL}/login`,
   };
 }
 
-export function reportEmail(input: { name: string; scope: string; cutoff: string; content: string; spaceName: string }): {
-  subject: string;
-  html: string;
-  text: string;
-} {
+export function reportEmail(input: { name: string; scope: string; cutoff: string; content: string; spaceName: string; mark: string }): TemplateOutput {
+  const assets = emailAssets(input.mark);
   const title = `Reporte: ${input.name}`;
-  const body = `<strong>${input.name}</strong> · ${input.scope}<br>Corte: ${input.cutoff}<br><br>${input.content}<br><br>Generado por ${input.spaceName}.${button(`${APP_URL}/reportes`, "Ver reportes")}`;
+  const html = shell({
+    title,
+    preheader: `${input.name} · ${input.scope}`,
+    markCid: assets.markCid,
+    socialCids: assets.socialCids,
+    body: `<strong>${esc(input.name)}</strong> · ${esc(input.scope)}<br>Corte: ${esc(input.cutoff)}<br><br>${esc(input.content)}<br><br>El detalle fila por fila va adjunto en PDF.<br><br>Generado por ${esc(input.spaceName)}.`,
+    ctaUrl: `${APP_URL}/reportes`,
+    ctaLabel: "Ver reportes",
+    footerSpace: input.spaceName,
+    footerWhy: `Recibiste este correo porque alguien de ${input.spaceName} te compartió este reporte.`,
+  });
   return {
     subject: `${title} · ${input.spaceName}`,
-    html: layout(title, body),
+    html,
     text: `${title}. ${input.scope}. Corte: ${input.cutoff}. ${input.content}`,
   };
 }

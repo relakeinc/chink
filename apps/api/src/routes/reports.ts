@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
-import { reportEmail, sendEmail } from "../lib/email.js";
+import { emailAssets, reportEmail, sendEmail } from "../lib/email.js";
+import { buildReportPdf } from "../lib/report-pdf.js";
 
 const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
@@ -129,7 +130,7 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
         prisma.warehouse.count({ where: { active: true } }),
         prisma.product.count({ where: { archived: false } }),
       ]);
-      const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true } });
+      const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true, spaceMark: true } });
 
       const catalog: Record<string, { scope: string; content: string }> = {
         "Inventario actual": {
@@ -146,9 +147,29 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
 
       const now = new Date();
       const cutoff = `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const content = reportEmail({ name, scope: entry.scope, cutoff, content: entry.content, spaceName: space?.spaceName ?? "Chink" });
+      const spaceName = space?.spaceName ?? "Chink";
+      const detail = await buildReportDetail(name);
+      const pdf = await buildReportPdf({
+        title: name,
+        spaceName,
+        scope: entry.scope,
+        cutoff,
+        summary: [entry.content],
+        headers: detail.headers,
+        widths: detail.widths,
+        rows: detail.rows,
+      });
+      const filename = `${name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.pdf`;
+      const content = reportEmail({ name, scope: entry.scope, cutoff, content: `${entry.content} (detalle en el PDF adjunto)`, spaceName, mark: space?.spaceMark ?? "workspace-mark" });
       try {
-        const sent = await sendEmail({ category: "reports", to: email.trim(), subject: content.subject, html: content.html, text: content.text });
+        const sent = await sendEmail({
+          category: "reports",
+          to: email.trim(),
+          subject: content.subject,
+          html: content.html,
+          text: content.text,
+          attachments: [...emailAssets(space?.spaceMark).attachments, { filename, content: pdf, contentType: "application/pdf" }],
+        });
         return { data: { id: sent.id, email: email.trim(), name } };
       } catch (error) {
         return reply.status(502).send({ error: error instanceof Error ? error.message : "No se pudo enviar el reporte" });
@@ -156,3 +177,70 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 };
+
+/**
+ * Filas de detalle por reporte (qué, cuándo, dónde): lo que el correo resume,
+ * el PDF lo lista.
+ */
+async function buildReportDetail(name: string): Promise<{ headers: string[]; widths: number[]; rows: string[][] }> {
+  const fmtInt = (value: number) => value.toLocaleString("es-CO");
+  const fmtMoney = (value: number) => `$${value.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  if (name === "Historial de movimientos") {
+    const rows = await prisma.stockMovement.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: { product: { select: { name: true, sku: true } }, origin: { select: { name: true } }, destination: { select: { name: true } }, owner: { select: { name: true } } },
+    });
+    const typeLabel = (type: string) => ({ ENTRY: "Entrada", EXIT: "Salida", TRANSFER: "Transferencia", ADJUSTMENT: "Ajuste" })[type] ?? type;
+    const dateOf = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    return {
+      headers: ["Ref", "Fecha", "Tipo", "Producto", "Cant.", "Origen → Destino", "Responsable"],
+      widths: [62, 78, 72, 110, 40, 130, 90],
+      rows: rows.map((m) => [
+        m.ref,
+        dateOf(m.createdAt),
+        typeLabel(m.type),
+        `${m.product.name} (${m.product.sku})`,
+        String(m.quantity),
+        m.origin && m.destination ? `${m.origin.name} → ${m.destination.name}` : (m.destination?.name ?? m.origin?.name ?? "—"),
+        m.owner.name,
+      ]),
+    };
+  }
+
+  if (name === "Productos con stock bajo") {
+    const rows = await prisma.product.findMany({ where: { status: "LOW_STOCK", archived: false }, orderBy: { position: "asc" } });
+    return {
+      headers: ["Producto", "SKU", "Mínimo", "Stock", "Faltante"],
+      widths: [170, 90, 70, 70, 70],
+      rows: rows.map((p) => [p.name, p.sku, fmtInt(p.minStock), fmtInt(p.stock), fmtInt(Math.max(p.minStock - p.stock, 0))]),
+    };
+  }
+
+  if (name === "Existencias por almacén") {
+    const rows = await prisma.warehouse.findMany({ orderBy: { position: "asc" }, include: { locations: true } });
+    return {
+      headers: ["Código", "Almacén", "Unidades", "Productos", "Ocupación"],
+      widths: [70, 150, 70, 70, 80],
+      rows: rows.map((w) => {
+        const units = w.locations.reduce((acc, l) => acc + l.quantity, 0);
+        const products = w.locations.filter((l) => l.quantity > 0).length;
+        const occupancy = w.capacity > 0 ? `${((units / w.capacity) * 100).toFixed(1)} %` : "—";
+        return [w.code, w.name, fmtInt(units), fmtInt(products), occupancy];
+      }),
+    };
+  }
+
+  // "Inventario actual" (y cualquier otro): catálogo completo.
+  const rows = await prisma.product.findMany({
+    where: { archived: false },
+    orderBy: { position: "asc" },
+    include: { locations: { include: { warehouse: true } } },
+  });
+  return {
+    headers: ["SKU", "Producto", "Categoría", "Stock", "Reservado", "Coste/ud"],
+    widths: [80, 150, 90, 55, 60, 65],
+    rows: rows.map((p) => [p.sku, p.name, p.category, fmtInt(p.stock), fmtInt(p.reserved), fmtMoney(Number(p.unitCost))]),
+  };
+}

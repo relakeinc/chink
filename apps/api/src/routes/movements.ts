@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import type { MovementType } from "@chink-saas/db";
 import type { Prisma } from "@chink-saas/db";
 import { prisma } from "@chink-saas/db";
-import { lowStockEmail, sendEmail } from "../lib/email.js";
+import { emailAssets, lowStockEmail, sendEmail } from "../lib/email.js";
 
 const TYPE_LABEL: Record<MovementType, string> = {
   ENTRY: "Entrada",
@@ -170,7 +170,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
       try {
         const prefs = await prisma.workspaceSetting.findUnique({
           where: { id: "default" },
-          select: { notifyLowStock: true, contactEmail: true, spaceName: true },
+          select: { notifyLowStock: true, contactEmail: true, spaceName: true, spaceMark: true },
         });
         if (prefs?.notifyLowStock && prefs.contactEmail) {
           const content = lowStockEmail({
@@ -179,8 +179,9 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
             stock: created.product.stock,
             minStock: product.minStock,
             spaceName: prefs.spaceName,
+            mark: prefs.spaceMark,
           });
-          await sendEmail({ category: "alerts", to: prefs.contactEmail, subject: content.subject, html: content.html, text: content.text });
+          await sendEmail({ category: "alerts", to: prefs.contactEmail, subject: content.subject, html: content.html, text: content.text, attachments: emailAssets(prefs.spaceMark).attachments });
         }
       } catch (error) {
         request.log.warn({ productId: product.id, error }, "No se pudo enviar la alerta de stock bajo");
