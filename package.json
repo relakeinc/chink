@@ -1,0 +1,27 @@
+{
+  "name": "chink-saas",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter @chink-saas/web",
+    "dev:api": "turbo run dev --filter @chink-saas/api",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @chink-saas/db run generate",
+    "db:migrate": "pnpm --filter @chink-saas/db run migrate",
+    "db:seed": "pnpm --filter @chink-saas/db run seed",
+    "db:reset": "pnpm --filter @chink-saas/db run reset"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4",
+    "typescript": "^5.7.3"
+  }
+}
