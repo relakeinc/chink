@@ -1,0 +1,41 @@
+/*
+ * Tokens extraídos del archivo de Figma "chink - prototipo".
+ * Todos los colores eram literales sin resolver; `#ddd` se normalizó a
+ * `--color-subtle` (#E8E8E0) para calzar dentro de la paleta crema.
+ */
+@theme {
+  /* Superficies */
+  --color-canvas: #f5f5ef;
+  --color-subtle: #e8e8e0;
+  --color-surface: #eeeee6;
+  --color-line: #dfe2d8;
+
+  /* Tinta */
+  --color-ink: #242722;
+  --color-ink-strong: #222222;
+  --color-muted: #74796f;
+  --color-line-strong: #41483a;
+  --color-muted-2: #a7ae9e;
+  --color-shell: #2d332b;
+
+  /* Acento lima */
+  --color-accent: #cdfa63;
+  --color-accent-text: #a3c97a;
+
+  /* Estados */
+  --color-success-bg: #1e2d10;
+  --color-success-soft: #1a2d10;
+  --color-row-selected: #1c2a10;
+  --color-toolbar-line: #2d4a1a;
+  --color-warn-bg: #3d2a0a;
+  --color-warn: #c87a2a;
+  --color-warn-badge: #3d2e12;
+  --color-warn-badge-text: #966223;
+  --color-warn-alert: #cc850b;
+  --color-online: #426632;
+
+  /* Tipografía */
+  --font-dm: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-outfit: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+}

@@ -1,0 +1,173 @@
+/*
+ * Sistema de movimiento.
+ *
+ * Reglas de la casa:
+ *  - Todo <= 300 ms salvo los intencionales (barras del gráfico, 400 ms).
+ *  - Solo se anima `transform` y `opacity`; nunca `height`/`width`/`top`,
+ *    para no disparar layout.
+ *  - `prefers-reduced-motion` desactiva animaciones de entrada; los cambios
+ *    de color siguen funcionando.
+ */
+
+@theme {
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --duration-chart: 400ms;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@keyframes chink-fade-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes chink-fade-in-down {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes chink-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale3d(0.96, 0.96, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes chink-toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes chink-badge-pop {
+  0% {
+    transform: scale3d(1, 1, 1);
+  }
+  45% {
+    transform: scale3d(1.18, 1.18, 1);
+  }
+  100% {
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes chink-grow-x {
+  from {
+    transform: scale3d(0, 1, 1);
+  }
+  to {
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes chink-grow-y {
+  from {
+    transform: scale3d(1, 0, 1);
+  }
+  to {
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes chink-skeleton {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@layer components {
+  .anim-fade-up {
+    animation: chink-fade-in var(--duration-slow) var(--ease-out-soft) both;
+  }
+
+  .anim-fade-down {
+    animation: chink-fade-in-down var(--duration-base) var(--ease-out-soft) both;
+  }
+
+  .anim-pop {
+    animation: chink-pop-in var(--duration-base) var(--ease-out-soft) both;
+  }
+
+  .anim-toast {
+    animation: chink-toast-in var(--duration-base) var(--ease-out-soft) both;
+  }
+
+  .anim-badge-pop {
+    animation: chink-badge-pop var(--duration-slow) var(--ease-out-soft);
+  }
+
+  .anim-grow-x {
+    transform-origin: left center;
+    animation: chink-grow-x var(--duration-chart) var(--ease-out-soft) both;
+  }
+
+  .anim-grow-y {
+    transform-origin: bottom center;
+    animation: chink-grow-y var(--duration-chart) var(--ease-out-soft) both;
+  }
+
+  .skeleton {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-subtle) 0%,
+      var(--color-line) 40%,
+      var(--color-subtle) 80%
+    );
+    background-size: 200% 100%;
+    animation: chink-skeleton 1.4s linear infinite;
+  }
+}
+
+/* Al escribir de más se encadena el retardo con --anim-delay (ms). */
+@layer utilities {
+  .anim-delay {
+    animation-delay: var(--anim-delay, 0ms);
+  }
+}
+
+/*
+ * Accesibilidad: sin prefers-reduced-motion no hay entradas animadas,
+ * pero los estados (hover, activo) siguen viéndose.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skeleton {
+    animation: none;
+    background-image: none;
+    background-color: var(--color-subtle);
+  }
+}
