@@ -35,6 +35,16 @@ export async function registerAuth(app: FastifyInstance) {
     }
   });
 
+  // Solo verifica el JWT, sin exigir ACTIVE: lo usa /auth/activate, al que el
+  // invitado llega justamente con su sesión PENDING.
+  app.decorate("authenticateAnyStatus", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ error: "Sesión expirada. Vuelve a iniciar sesión." });
+    }
+  });
+
   app.decorate("requirePermission", (permission: string) => async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user;
     const record = await prisma.rolePermission.findFirst({
@@ -48,6 +58,7 @@ export async function registerAuth(app: FastifyInstance) {
 declare module "fastify" {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    authenticateAnyStatus: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     requirePermission: (permission: string) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }

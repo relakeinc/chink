@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
-import { invitationEmail, sendEmail } from "../lib/email.js";
+import { emailAssets, invitationEmail, invitationExistingEmail, sendEmail } from "../lib/email.js";
 
 const inviteBodySchema = {
   type: "object",
@@ -20,12 +20,28 @@ async function sendInvitationEmail(
   input: { to: string; name: string; role: string; temporaryPassword: string; resent?: boolean },
 ): Promise<boolean> {
   try {
-    const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true } });
-    const content = invitationEmail({ ...input, spaceName: space?.spaceName ?? "Chink" });
-    await sendEmail({ category: "invitations", to: input.to, subject: content.subject, html: content.html, text: content.text });
+    const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true, spaceMark: true } });
+    const content = invitationEmail({ ...input, mark: space?.spaceMark ?? "workspace-mark", spaceName: space?.spaceName ?? "Chink" });
+    await sendEmail({ category: "invitations", to: input.to, subject: content.subject, html: content.html, text: content.text, attachments: emailAssets(space?.spaceMark).attachments });
     return true;
   } catch (error) {
     log.warn({ to: input.to, error }, "No se pudo enviar la invitación por correo");
+    return false;
+  }
+}
+
+/** Avisa a quien ya es miembro (sin clave, sin tocar su cuenta). */
+async function sendMemberNoticeEmail(
+  log: { warn: (obj: unknown, msg: string) => void },
+  input: { to: string; name: string; role: string },
+): Promise<boolean> {
+  try {
+    const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true, spaceMark: true } });
+    const content = invitationExistingEmail({ ...input, mark: space?.spaceMark ?? "workspace-mark", spaceName: space?.spaceName ?? "Chink" });
+    await sendEmail({ category: "invitations", to: input.to, subject: content.subject, html: content.html, text: content.text, attachments: emailAssets(space?.spaceMark).attachments });
+    return true;
+  } catch (error) {
+    log.warn({ to: input.to, error }, "No se pudo avisar al miembro por correo");
     return false;
   }
 }
@@ -44,11 +60,28 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
     };
 
     const email = body.email.trim().toLowerCase();
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return reply.status(409).send({ error: `${email} ya está en el equipo` });
 
     const role = await prisma.role.findUnique({ where: { id: body.roleId } });
     if (!role) return reply.status(400).send({ error: "Rol no válido" });
+
+    // Ya es miembro: no se crea nada ni se toca su cuenta; solo se le avisa.
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return {
+        data: {
+          id: existing.id,
+          email: existing.email,
+          role: role.name,
+          temporaryPassword: null,
+          alreadyMember: true,
+          emailSent: await sendMemberNoticeEmail(request.log, {
+            to: email,
+            name: existing.name,
+            role: role.name,
+          }),
+        },
+      };
+    }
 
     // Contraseña temporal: la cuenta queda pendiente hasta activarla.
     const temporaryPassword = crypto.randomUUID().slice(0, 8);

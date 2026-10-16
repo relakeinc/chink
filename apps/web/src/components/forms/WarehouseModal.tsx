@@ -147,12 +147,21 @@ export function InviteModal({ open, onClose, matrix, warehouseOptions, onDone }:
         roleId,
         warehouseIds: warehouseId ? [warehouseId] : undefined,
       });
-      showNotice(
-        result.data.emailSent
-          ? `Invitación enviada a ${result.data.email}.`
-          : `Invitación creada, pero el correo no salió. Clave temporal: ${result.data.temporaryPassword}`,
-        result.data.emailSent ? {} : { variant: "warning", icon: "warning" },
-      );
+      if (result.data.alreadyMember) {
+        showNotice(
+          result.data.emailSent
+            ? `Ya es miembro: se le avisó por correo a ${result.data.email}.`
+            : `Ya es miembro, pero el aviso por correo no salió.`,
+          result.data.emailSent ? {} : { variant: "warning", icon: "warning" },
+        );
+      } else {
+        showNotice(
+          result.data.emailSent
+            ? `Invitación enviada a ${result.data.email}.`
+            : `Invitación creada, pero el correo no salió. Clave temporal: ${result.data.temporaryPassword}`,
+          result.data.emailSent ? {} : { variant: "warning", icon: "warning" },
+        );
+      }
       setEmail("");
       setName("");
       await onDone();

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
-import { passwordChangedEmail, sendEmail } from "../lib/email.js";
+import { emailAssets, passwordChangedEmail, sendEmail } from "../lib/email.js";
 
 const loginBody = {
   type: "object",
@@ -31,9 +31,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return invalid();
 
-    if (user.status !== "ACTIVE") {
-      return reply.status(403).send({ error: "Tu invitación todavía está pendiente" });
-    }
+    // Un invitado PENDING entra con su clave temporal, pero marcado para
+    // activar: el frontend lo retiene en /activar hasta que ponga su clave.
+    const mustActivate = user.status !== "ACTIVE";
 
     await prisma.user.update({ where: { id: user.id }, data: { lastAccessAt: new Date() } });
 
@@ -50,6 +50,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       token: app.jwt.sign(session, { expiresIn: "12h" }),
       user: session,
       permissions: user.role.permissions.filter((p) => p.allowed).map((p) => p.permission.key),
+      mustActivate,
     };
   });
 
@@ -84,13 +85,71 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
       // Confirmación accesoria: si el correo falla, el cambio ya quedó.
       try {
-        const content = passwordChangedEmail({ name: user.name });
-        await sendEmail({ category: "verification", to: user.email, subject: content.subject, html: content.html, text: content.text });
+        const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true, spaceMark: true } });
+        const content = passwordChangedEmail({ name: user.name, spaceName: space?.spaceName ?? "Chink", mark: space?.spaceMark ?? "workspace-mark" });
+        await sendEmail({ category: "verification", to: user.email, subject: content.subject, html: content.html, text: content.text, attachments: emailAssets(space?.spaceMark).attachments });
       } catch (error) {
         request.log.warn({ userId: user.id, error }, "No se pudo enviar la confirmación de contraseña");
       }
 
       return { data: { updated: true } };
+    },
+  );
+
+    /**
+   * Activa la cuenta: verifica la clave temporal, fija la definitiva y pasa a
+   * ACTIVE. Solo para invitados PENDING con sesión válida.
+   */
+  app.patch(
+    "/activate",
+    {
+      onRequest: (request, reply) => app.authenticateAnyStatus(request, reply),
+      schema: {
+        body: {
+          type: "object",
+          required: ["currentPassword", "newPassword"],
+          properties: {
+            currentPassword: { type: "string", minLength: 1 },
+            newPassword: { type: "string", minLength: 8, maxLength: 72 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const user = await prisma.user.findUnique({
+        where: { id: request.user.id },
+        include: { role: { include: { permissions: { include: { permission: true } } } } },
+      });
+      if (!user) return reply.status(404).send({ error: "Usuario no encontrado" });
+      if (user.status !== "PENDING") return reply.status(400).send({ error: "La cuenta ya está activa" });
+
+      const { currentPassword, newPassword } = request.body as { currentPassword: string; newPassword: string };
+      const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!ok) return reply.status(400).send({ error: "La clave temporal no es correcta" });
+      if (newPassword === currentPassword) {
+        return reply.status(400).send({ error: "La nueva contraseña debe ser distinta de la temporal" });
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: await bcrypt.hash(newPassword, 10), status: "ACTIVE", lastAccessAt: new Date() },
+        include: { role: { include: { permissions: { include: { permission: true } } } } },
+      });
+
+      const session = {
+        id: updated.id,
+        email: updated.email,
+        name: updated.name,
+        initials: updated.initials,
+        role: updated.role.name,
+        status: updated.status,
+      };
+
+      return {
+        token: app.jwt.sign(session, { expiresIn: "12h" }),
+        user: session,
+        permissions: updated.role.permissions.filter((p) => p.allowed).map((p) => p.permission.key),
+      };
     },
   );
 

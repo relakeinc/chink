@@ -13,14 +13,20 @@ const DEMO_ACCOUNTS = [
 
 const DEMO_PASSWORD = "chink2026";
 
+/** Las cuentas de ejemplo solo existen en desarrollo: en prod van ocultas. */
+const SHOW_DEMO = import.meta.env.DEV;
+
 export default function Login() {
   const { user, login, error } = useAuth();
   const location = useLocation();
-  const [email, setEmail] = useState("lucia@chink.es");
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState(SHOW_DEMO ? "lucia@chink.es" : "");
+  const [password, setPassword] = useState(SHOW_DEMO ? DEMO_PASSWORD : "");
   const [sending, setSending] = useState(false);
 
   if (user) {
+    if (user.status === "PENDING") {
+      return <Navigate to="/activar" replace />;
+    }
     const from = (location.state as { from?: string } | null)?.from;
     return <Navigate to={from && from !== "/login" ? from : "/inicio"} replace />;
   }
@@ -84,28 +90,30 @@ export default function Login() {
           </Button>
         </form>
 
-        {/* Cuentas de demostración sembradas por el seed */}
-        <div className="mt-[20px] rounded-[8px] bg-surface p-[16px]">
-          <p className="text-[11px] font-semibold text-ink">Cuentas de ejemplo</p>
-          <p className="mt-[4px] text-[10px] leading-[1.4] text-muted">
-            Contraseña para todas: <code className="font-semibold text-ink">{DEMO_PASSWORD}</code>
-          </p>
-          <div className="mt-[10px] flex flex-wrap gap-[6px]">
-            {DEMO_ACCOUNTS.map((account) => (
-              <button
-                key={account.email}
-                type="button"
-                onClick={() => {
-                  setEmail(account.email);
-                  setPassword(DEMO_PASSWORD);
-                }}
-                className="rounded-[5px] bg-canvas px-[8px] py-[4px] text-[10px] text-muted hover:text-ink"
-              >
-                {account.role}
-              </button>
-            ))}
+        {/* Cuentas de demostración: solo en desarrollo, nunca en producción. */}
+        {SHOW_DEMO ? (
+          <div className="mt-[20px] rounded-[8px] bg-surface p-[16px]">
+            <p className="text-[11px] font-semibold text-ink">Cuentas de ejemplo</p>
+            <p className="mt-[4px] text-[10px] leading-[1.4] text-muted">
+              Contraseña para todas: <code className="font-semibold text-ink">{DEMO_PASSWORD}</code>
+            </p>
+            <div className="mt-[10px] flex flex-wrap gap-[6px]">
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  onClick={() => {
+                    setEmail(account.email);
+                    setPassword(DEMO_PASSWORD);
+                  }}
+                  className="rounded-[5px] bg-canvas px-[8px] py-[4px] text-[10px] text-muted hover:text-ink"
+                >
+                  {account.role}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );

@@ -17,5 +17,10 @@ export default function RequireAuth() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
+  // Invitado sin activar: solo puede estar en /activar hasta poner su clave.
+  if (user.status === "PENDING" && location.pathname !== "/activar") {
+    return <Navigate to="/activar" replace />;
+  }
+
   return <Outlet />;
 }

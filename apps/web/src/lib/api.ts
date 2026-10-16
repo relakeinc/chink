@@ -229,11 +229,13 @@ export interface BarPoint {
 export const api = {
   /* Auth */
   login: (email: string, password: string) =>
-    request<{ token: string; user: SessionUser; permissions: string[] }>("/api/auth/login", {
+    request<{ token: string; user: SessionUser; permissions: string[]; mustActivate: boolean }>("/api/auth/login", {
       method: "POST",
       body: { email, password },
     }),
   me: () => request<{ user: SessionUser; permissions: string[] }>("/api/auth/me"),
+  activate: (body: { currentPassword: string; newPassword: string }) =>
+    request<{ token: string; user: SessionUser; permissions: string[] }>("/api/auth/activate", { method: "PATCH", body }),
   changePassword: (body: { currentPassword: string; newPassword: string }) =>
     request<{ data: { updated: boolean } }>("/api/auth/password", { method: "PATCH", body }),
 
@@ -298,7 +300,9 @@ export const api = {
   updateMemberRole: (id: string, roleId: string) =>
     request<{ data: { id: string; roleId: string } }>(`/api/team/members/${id}`, { method: "PATCH", body: { roleId } }),
   inviteMember: (body: { email: string; name: string; roleId: string; warehouseIds?: string[] }) =>
-    request<{ data: { id: string; email: string; role: string; temporaryPassword: string; emailSent: boolean } }>("/api/team/invitations", {
+    request<{
+      data: { id: string; email: string; role: string; temporaryPassword: string | null; alreadyMember?: boolean; emailSent: boolean };
+    }>("/api/team/invitations", {
       method: "POST",
       body,
     }),
