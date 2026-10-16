@@ -1,0 +1,239 @@
+// Esquema de datos de chink-saas.
+// Cubre las siete pantallas: Inicio, Inventario, Movimientos, Almacenes,
+// Reportes, Equipo y Configuración.
+// Todos los importes monetarios se guardan en COP.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductStatus {
+  IN_STOCK
+  LOW_STOCK
+}
+
+enum MemberStatus {
+  ACTIVE
+  PENDING
+}
+
+enum MovementType {
+  ENTRY
+  EXIT
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum MovementStatus {
+  CONFIRMED
+  PENDING
+}
+
+// ------------------------------------------------------------------ Equipo
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  initials     String
+  roleId       String
+  role         Role         @relation(fields: [roleId], references: [id])
+  status       MemberStatus @default(ACTIVE)
+  invitedAt    DateTime?
+  lastAccessAt DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  warehouses        UserWarehouse[]
+  movements         StockMovement[]
+  ownedWarehouses   Warehouse[]      @relation("WarehouseOwner")
+  settingsUpdates   WorkspaceSetting[]
+
+  @@map("users")
+}
+
+model Role {
+  id    String @id @default(cuid())
+  name  String @unique
+  users User[]
+
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id    String @id @default(cuid())
+  key   String @unique
+  label String
+  order Int    @default(0)
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  allowed      Boolean @default(false)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+/// Almacenes a los que tiene acceso cada miembro.
+model UserWarehouse {
+  userId      String
+  warehouseId String
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@id([userId, warehouseId])
+  @@map("user_warehouses")
+}
+
+// --------------------------------------------------------------- Inventario
+
+model Warehouse {
+  id           String  @id @default(cuid())
+  code         String  @unique
+  name         String
+  location     String
+  address      String
+  capacity     Int
+  active       Boolean @default(true)
+  position     Int     @default(0)
+  responsibleId String?
+
+  responsible User?           @relation("WarehouseOwner", fields: [responsibleId], references: [id], onDelete: SetNull)
+  locations   StockLocation[]
+  members     UserWarehouse[]
+  origins     StockMovement[] @relation("MovementOrigin")
+  destinations StockMovement[] @relation("MovementDestination")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("warehouses")
+}
+
+model Product {
+  id         String        @id @default(cuid())
+  sku        String        @unique
+  name       String
+  category   String
+  stock      Int           @default(0)
+  reserved   Int           @default(0)
+  unitCost   Decimal       @db.Decimal(14, 2)
+  totalValue Decimal       @db.Decimal(16, 2)
+  status     ProductStatus @default(IN_STOCK)
+  archived   Boolean       @default(false)
+  /// Orden de salida por defecto de la tabla (el diseño define un orden fijo)
+  position   Int           @default(0)
+  /// Clave del icono en apps/web/src/assets/icons (sin extensión)
+  icon       String        @default("package")
+  /// Objeto en R2 con la foto del producto y su URL pública.
+  imageKey   String?
+  imageUrl   String?
+  minStock   Int           @default(0)
+
+  locations StockLocation[]
+  movements StockMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([archived])
+  @@map("products")
+}
+
+/// Existencias de un producto en cada almacén (pantalla "Existencias por ubicación").
+model StockLocation {
+  productId   String
+  warehouseId String
+  quantity    Int    @default(0)
+  reserved    Int    @default(0)
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@id([productId, warehouseId])
+  @@map("stock_locations")
+}
+
+// -------------------------------------------------------------- Movimientos
+
+model StockMovement {
+  id            String         @id @default(cuid())
+  ref           String         @unique
+  type          MovementType
+  status        MovementStatus @default(CONFIRMED)
+  quantity      Int
+  note          String?
+  productId     String
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  originId      String?
+  destinationId String?
+  ownerId       String
+  createdAt     DateTime       @default(now())
+
+  origin      Warehouse? @relation("MovementOrigin", fields: [originId], references: [id], onDelete: SetNull)
+  destination Warehouse? @relation("MovementDestination", fields: [destinationId], references: [id], onDelete: SetNull)
+  owner       User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([type])
+  @@map("stock_movements")
+}
+
+// ----------------------------------------------------------- Configuración
+
+/// Preferencias del espacio de trabajo. Es un singleton con id fijo.
+model WorkspaceSetting {
+  id           String @id @default("default")
+  spaceName    String
+  /// Color del avatar del espacio, en hexadecimal (se elige en Configuración).
+  spaceColor   String @default("#242722")
+  /// Icono del espacio (galería `workspace-*` en assets/icons, sin extensión).
+  spaceMark    String @default("workspace-mark")
+  legalName    String
+  contactEmail String
+  taxId        String
+  language     String
+  currency     String
+  timezone     String
+  dateFormat   String
+  unit         String
+  defaultWarehouseId String?
+  movementPrefix     String
+  defaultMinStock    Int
+
+  allowNegativeStock    Boolean @default(false)
+  requireAdjustmentReason Boolean @default(true)
+  lowStockAlerts           Boolean @default(true)
+  reserveBeforePicking    Boolean @default(true)
+
+  /// Preferencias de avisos del espacio.
+  notifyLowStock     Boolean @default(true)
+  notifyMovements    Boolean @default(true)
+  notifyWeeklyReport Boolean @default(false)
+
+  updatedById String?
+  updatedBy   User?   @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt   DateTime @updatedAt
+
+  @@map("workspace_settings")
+}
