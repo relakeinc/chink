@@ -97,6 +97,8 @@ export const warehouseRoutes: FastifyPluginAsync = async (app) => {
           id: product.id,
           sku: product.sku,
           product: product.name,
+          icon: product.icon,
+          imageUrl: product.imageUrl,
           status: product.status === "LOW_STOCK" ? "Stock bajo" : "En stock",
           total: product.stock,
           quantities: warehouses.map((w) => byWarehouse[w.id]?.quantity ?? 0),

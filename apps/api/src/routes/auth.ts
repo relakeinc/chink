@@ -47,7 +47,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     };
 
     return {
-      token: app.jwt.sign(session, { expiresIn: "12h" }),
+      token: app.jwt.sign(session, { expiresIn: "7d" }),
       user: session,
       permissions: user.role.permissions.filter((p) => p.allowed).map((p) => p.permission.key),
       mustActivate,
@@ -146,7 +146,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       };
 
       return {
-        token: app.jwt.sign(session, { expiresIn: "12h" }),
+        token: app.jwt.sign(session, { expiresIn: "7d" }),
         user: session,
         permissions: updated.role.permissions.filter((p) => p.allowed).map((p) => p.permission.key),
       };

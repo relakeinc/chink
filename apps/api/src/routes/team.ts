@@ -51,7 +51,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
    * Invita a un miembro. La cuenta nace en estado PENDING: no puede iniciar
    * sesión hasta que se active (así lo refleja la matriz de permisos).
    */
-  app.post("/invitations", { schema: { body: inviteBodySchema } }, async (request, reply) => {
+  app.post("/invitations", { preHandler: app.requirePermission("admin"), schema: { body: inviteBodySchema } }, async (request, reply) => {
     const body = request.body as {
       email: string;
       name: string;
@@ -131,7 +131,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
    * renueva la fecha de invitación. Sin correo saliente, la contraseña se
    * entrega al administrador para compartirla por su canal habitual.
    */
-  app.post<{ Params: { id: string } }>("/invitations/:id/resend", async (request, reply) => {
+  app.post<{ Params: { id: string } }>("/invitations/:id/resend", { preHandler: app.requirePermission("admin") }, async (request, reply) => {
     const member = await prisma.user.findUnique({ where: { id: request.params.id } });
     if (!member) return reply.status(404).send({ error: "Miembro no encontrado" });
     if (member.status !== "PENDING") return reply.status(400).send({ error: "Solo se reenvían invitaciones pendientes" });
@@ -240,17 +240,58 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /** Actualiza el rol de un miembro. */
-  app.patch<{ Params: { id: string } }>("/members/:id", async (request, reply) => {
-    const { roleId } = request.body as { roleId?: string };
-    if (!roleId) return reply.status(400).send({ error: "Falta roleId" });
+  app.patch<{ Params: { id: string } }>(
+    "/members/:id",
+    { preHandler: app.requirePermission("admin") },
+    async (request, reply) => {
+      const { roleId } = request.body as { roleId?: string };
+      if (!roleId) return reply.status(400).send({ error: "Falta roleId" });
 
-    const member = await prisma.user.findUnique({ where: { id: request.params.id } });
-    if (!member) return reply.status(404).send({ error: "Miembro no encontrado" });
-    if (member.id === request.user.id) return reply.status(400).send({ error: "No puedes cambiarte el rol a ti mismo" });
+      const member = await prisma.user.findUnique({ where: { id: request.params.id } });
+      if (!member) return reply.status(404).send({ error: "Miembro no encontrado" });
+      if (member.id === request.user.id) return reply.status(400).send({ error: "No puedes cambiarte el rol a ti mismo" });
 
-    await prisma.user.update({ where: { id: member.id }, data: { roleId } });
-    return { data: { id: member.id, roleId } };
-  });
+      await prisma.user.update({ where: { id: member.id }, data: { roleId } });
+      return { data: { id: member.id, roleId } };
+    },
+  );
+
+  /**
+   * Cambia un permiso de un rol. Solo administración: es lo que hace real el
+   * "Editar acceso" de la matriz.
+   */
+  app.patch(
+    "/permissions",
+    {
+      preHandler: app.requirePermission("admin"),
+      schema: {
+        body: {
+          type: "object",
+          required: ["roleId", "permissionId", "allowed"],
+          properties: {
+            roleId: { type: "string", minLength: 1 },
+            permissionId: { type: "string", minLength: 1 },
+            allowed: { type: "boolean" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { roleId, permissionId, allowed } = request.body as { roleId: string; permissionId: string; allowed: boolean };
+      const [role, permission] = await Promise.all([
+        prisma.role.findUnique({ where: { id: roleId } }),
+        prisma.permission.findUnique({ where: { id: permissionId } }),
+      ]);
+      if (!role || !permission) return reply.status(404).send({ error: "Rol o permiso no encontrado" });
+
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId, permissionId } },
+        update: { allowed },
+        create: { roleId, permissionId, allowed },
+      });
+      return { data: { roleId, permissionId, allowed } };
+    },
+  );
 };
 
 const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];

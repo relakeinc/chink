@@ -260,6 +260,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
         type: TYPE_LABEL[row.type],
         product: row.product.name,
         sku: row.product.sku,
+        imageUrl: row.product.imageUrl,
         quantity: row.quantity,
         route: row.note ?? "—",
         owner: row.owner.name,

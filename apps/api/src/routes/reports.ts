@@ -74,7 +74,7 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
       where: { status: "LOW_STOCK", archived: false },
       orderBy: { position: "asc" },
     });
-    return { data: products.map((p) => ({ name: p.name, sku: p.sku, minStock: p.minStock, stock: p.stock })) };
+    return { data: products.map((p) => ({ name: p.name, sku: p.sku, minStock: p.minStock, stock: p.stock, imageUrl: p.imageUrl })) };
   });
 
   /** Reportes exportables. */
