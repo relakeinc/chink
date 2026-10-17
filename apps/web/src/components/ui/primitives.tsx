@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Icon } from "./Icon";
+import { ICONS } from "./icons";
 
 /* ---------------------------------------------------------------- Botones */
 
@@ -34,6 +35,13 @@ const METRICS: Record<number, { padding: string; gap: string }> = {
   38: { padding: "px-[16px]", gap: "gap-[8px]" },
 };
 
+/**
+ * Iconos que ya vienen claros de fábrica: no se les aplica el filtro en
+ * fondos oscuros. El resto se resuelve a su variante `-filter` si existe y,
+ * si no, se aclara con filtro (tinta → crema, igual que el texto).
+ */
+const LIGHT_ICONS = new Set(["chevron-down-filter", "columns-3", "download", "transfer", "upload"]);
+
 export function Button({
   variant = "dark",
   icon,
@@ -44,6 +52,10 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const metrics = METRICS[height] ?? METRICS[38]!;
+  const dark = variant === "dark" || variant === "filter";
+  const filterName = icon ? `${icon}-filter` : "";
+  const resolvedIcon = icon && dark && filterName in ICONS ? filterName : icon;
+  const toneClass = icon && dark && !LIGHT_ICONS.has(resolvedIcon ?? "") ? "brightness-0 invert" : "";
 
   return (
     <button
@@ -51,7 +63,7 @@ export function Button({
       className={`inline-flex shrink-0 items-center justify-center rounded-[8px] text-[13px] leading-[1.4] transition-opacity hover:opacity-90 ${VARIANTS[variant]} ${HEIGHTS[height]} ${metrics.padding} ${metrics.gap} ${className}`}
       {...rest}
     >
-      {icon ? <Icon name={icon} size={iconSize} /> : null}
+      {resolvedIcon ? <Icon name={resolvedIcon} size={iconSize} className={toneClass} /> : null}
       {children}
     </button>
   );

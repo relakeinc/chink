@@ -128,6 +128,7 @@ export interface MovementRow {
   type: "Entrada" | "Salida" | "Transferencia" | "Ajuste";
   product: string;
   sku: string;
+  imageUrl: string | null;
   quantity: number;
   route: string;
   owner: string;
@@ -288,7 +289,7 @@ export const api = {
   getLocations: () =>
     request<{
       warehouses: { id: string; code: string; name: string }[];
-      data: { id: string; sku: string; product: string; status: string; total: number; quantities: number[] }[];
+      data: { id: string; sku: string; product: string; icon: string; imageUrl: string | null; status: string; total: number; quantities: number[] }[];
     }>("/api/warehouses/locations"),
   getWarehousesSummary: () =>
     request<{ active: number; stock: number; capacity: number; occupancy: number; free: number }>("/api/warehouses/summary"),
@@ -299,6 +300,11 @@ export const api = {
   getPermissions: () => request<RoleMatrix>("/api/team/permissions"),
   updateMemberRole: (id: string, roleId: string) =>
     request<{ data: { id: string; roleId: string } }>(`/api/team/members/${id}`, { method: "PATCH", body: { roleId } }),
+  updatePermissions: (body: { roleId: string; permissionId: string; allowed: boolean }) =>
+    request<{ data: { roleId: string; permissionId: string; allowed: boolean } }>("/api/team/permissions", {
+      method: "PATCH",
+      body,
+    }),
   inviteMember: (body: { email: string; name: string; roleId: string; warehouseIds?: string[] }) =>
     request<{
       data: { id: string; email: string; role: string; temporaryPassword: string | null; alreadyMember?: boolean; emailSent: boolean };
@@ -318,7 +324,7 @@ export const api = {
   getCategories: () => request<{ total: number; data: CategoryRow[] }>("/api/reports/categories"),
   getExports: () => request<{ data: ExportableReport[] }>("/api/reports/exports"),
   getLowStock: () =>
-    request<{ data: { name: string; sku: string; minStock: number; stock: number }[] }>("/api/reports/low-stock"),
+    request<{ data: { name: string; sku: string; minStock: number; stock: number; imageUrl: string | null }[] }>("/api/reports/low-stock"),
 
   /* Configuración */
   getSettings: () =>

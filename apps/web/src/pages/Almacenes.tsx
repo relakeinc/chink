@@ -8,6 +8,7 @@ import KpiStrip, { KpiValue, PageFooter, PageHeader } from "@/components/ui/KpiS
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/inputs";
 import { Badge, Button, Card, LinkAction, ProgressBar } from "@/components/ui/primitives";
+import { ProductThumb } from "@/components/ui/ProductThumb";
 import { Icon } from "@/components/ui/Icon";
 import { useNotice } from "@/lib/toast";
 import MovementModal from "@/components/forms/MovementModal";
@@ -17,6 +18,8 @@ type LocationRow = {
   id: string;
   sku: string;
   product: string;
+  icon: string;
+  imageUrl: string | null;
   status: string;
   total: number;
   quantities: number[];
@@ -65,9 +68,12 @@ export default function Almacenes() {
       header: "Producto / SKU",
       width: "flex-1 min-w-px",
       render: (r) => (
-        <span className="flex flex-col gap-[2px] leading-[1.4]">
-          <span className="text-[13px] text-ink">{r.product}</span>
-          <span className="text-[10px] text-muted">{r.sku}</span>
+        <span className="flex items-center gap-[11px]">
+          <ProductThumb imageUrl={r.imageUrl} icon={r.icon} name={r.product} size={30} />
+          <span className="flex min-w-px flex-col gap-[2px] leading-[1.4]">
+            <span className="text-[13px] text-ink">{r.product}</span>
+            <span className="text-[10px] text-muted">{r.sku}</span>
+          </span>
         </span>
       ),
     },
@@ -117,7 +123,7 @@ export default function Almacenes() {
       ) : warehouses.loading ? (
         <LoadingBlock />
       ) : (
-        <div className="grid grid-cols-3 gap-[20px]">
+        <div className="grid grid-cols-1 gap-[20px] md:grid-cols-2 xl:grid-cols-3">
           {sites.map((warehouse) => (
             <Card key={warehouse.id} className="flex min-h-[263px] flex-col gap-[16px] p-[20px]">
               <div className="flex items-center gap-[12px]">

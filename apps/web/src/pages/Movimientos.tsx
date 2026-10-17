@@ -14,6 +14,7 @@ import Tabs from "@/components/ui/Tabs";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import { ColumnMenu, FilterSelect, Pagination, SearchInput, useCommandK } from "@/components/ui/inputs";
 import { Badge, Button, Card } from "@/components/ui/primitives";
+import { ProductThumb } from "@/components/ui/ProductThumb";
 import { Icon } from "@/components/ui/Icon";
 import { useNotice } from "@/lib/toast";
 
@@ -116,9 +117,12 @@ export default function Movimientos() {
       header: "Producto / SKU",
       width: "flex-1 min-w-px",
       render: (m) => (
-        <span className="flex flex-col gap-[2px] leading-[1.4]">
-          <span className="text-[13px] text-ink">{m.product}</span>
-          <span className="text-[10px] text-muted">{m.sku}</span>
+        <span className="flex items-center gap-[11px]">
+          <ProductThumb imageUrl={m.imageUrl} name={m.product} />
+          <span className="flex min-w-px flex-col gap-[2px] leading-[1.4]">
+            <span className="text-[13px] text-ink">{m.product}</span>
+            <span className="text-[10px] text-muted">{m.sku}</span>
+          </span>
         </span>
       ),
     },
@@ -139,13 +143,7 @@ export default function Movimientos() {
       key: "status",
       header: "Estado",
       width: "w-[110px]",
-      render: (m) => <Badge tone="success">{m.status}</Badge>,
-    },
-    {
-      key: "actions",
-      header: "",
-      width: "w-[16px]",
-      render: () => <span className="text-[13px] text-ink">···</span>,
+      render: (m: MovementRow) => <Badge tone="success">{m.status}</Badge>,
     },
   ];
 
@@ -171,7 +169,7 @@ export default function Movimientos() {
       <Card className="flex flex-col overflow-hidden">
         <Tabs items={tabs} active={view} onChange={(id) => { setView(id); setPage(1); }} />
 
-        <div className="flex items-center gap-[8px] p-[16px]">
+        <div className="flex flex-wrap items-center gap-[8px] p-[16px]">
           <SearchInput
             inputRef={searchRef}
             value={searchInput}

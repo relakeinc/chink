@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import type { Member } from "@/lib/api";
 import { useAsync, ErrorBlock, LoadingBlock, useDebounced } from "@/lib/useAsync";
 import { formatInt } from "@/lib/format";
@@ -83,7 +83,14 @@ export default function Equipo() {
           res.data.emailSent ? {} : { variant: "warning", icon: "warning" },
         );
       } catch (cause) {
-        showNotice(cause instanceof Error ? cause.message : "No se pudo reenviar la invitación", { variant: "error", icon: "cancel" });
+        // La fila puede ir desfasada (p. ej. ya aceptó en otra sesión):
+        // se recarga y se explica en vez de dejar un 400 críptico.
+        await members.reload();
+        const changed = cause instanceof ApiError && cause.status === 400;
+        showNotice(
+          changed ? "Su estado cambió. Lista actualizada, revisa su fila." : cause instanceof Error ? cause.message : "No se pudo reenviar la invitación",
+          { variant: changed ? "info" : "error", icon: changed ? "info" : "cancel" },
+        );
       }
       return;
     }
@@ -92,6 +99,23 @@ export default function Equipo() {
       return;
     }
     scrollToRoles();
+  }
+
+  /** Conmutador de la matriz: aplica al instante y revierte si falla. */
+  async function toggleGrant(roleId: string, permissionId: string, allowed: boolean) {
+    const prev = matrix.data;
+    if (prev) {
+      matrix.setData({
+        ...prev,
+        permissions: prev.permissions.map((p) => (p.id === permissionId ? { ...p, grants: { ...p.grants, [roleId]: allowed } } : p)),
+      });
+    }
+    try {
+      await api.updatePermissions({ roleId, permissionId, allowed });
+    } catch (cause) {
+      await matrix.reload();
+      showNotice(cause instanceof Error ? cause.message : "No se pudo actualizar el permiso", { variant: "error", icon: "cancel" });
+    }
   }
 
   const columns: Column<Member>[] = [
@@ -127,11 +151,16 @@ export default function Equipo() {
             onChange={async (next) => {
               const role = matrix.data?.roles.find((r) => r.name === next);
               if (!role) return;
+              // Optimista: la fila cambia al instante; si falla, se revierte.
+              const prev = members.data;
+              if (prev) {
+                members.setData({ ...prev, data: prev.data.map((row) => (row.id === m.id ? { ...row, role: role.name } : row)) });
+              }
               try {
                 await api.updateMemberRole(m.id, role.id);
-                await members.reload();
                 showNotice(`${m.name} ahora es ${role.name}.`);
               } catch (cause) {
+                await members.reload();
                 showNotice(cause instanceof Error ? cause.message : "No se pudo actualizar el rol", {
                   variant: "error",
                   icon: "cancel",
@@ -170,9 +199,30 @@ export default function Equipo() {
       key: role.id,
       header: role.header,
       width: "w-[230px]",
-      render: (p: (typeof permissions)[number]) => (
-        <span className={`text-[13px] ${p.grants[role.id] ? "text-ink" : "text-muted-2"}`}>{p.grants[role.id] ? "✓ Permitido" : "—"}</span>
-      ),
+      render: (p: (typeof permissions)[number]) => {
+        const granted = Boolean(p.grants[role.id]);
+        return (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={granted}
+            aria-label={`${p.label} para ${role.name}`}
+            onClick={() => void toggleGrant(role.id, p.id, !granted)}
+            className={`flex items-center gap-[8px] rounded-[5px] px-[8px] py-[4px] text-[13px] transition-colors hover:bg-subtle ${
+              granted ? "text-ink" : "text-muted-2"
+            }`}
+          >
+            <span
+              className={`flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border ${
+                granted ? "border-accent bg-accent" : "border-[rgba(65,72,58,0.2)] bg-subtle"
+              }`}
+            >
+              {granted ? <Icon name="check" size={10} /> : null}
+            </span>
+            {granted ? "Permitido" : "—"}
+          </button>
+        );
+      },
     })),
   ];
 
@@ -199,7 +249,7 @@ export default function Equipo() {
         <Card className="flex flex-col overflow-hidden">
           <Tabs items={tabs} active={view} onChange={setView} />
 
-          <div className="flex items-center gap-[8px] p-[16px]">
+          <div className="flex flex-wrap items-center gap-[8px] p-[16px]">
             <SearchInput inputRef={searchRef} value={searchInput} onChange={setSearchInput} placeholder="Buscar por nombre o correo" />
             <FilterSelect
               label="Todos los roles"

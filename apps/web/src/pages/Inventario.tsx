@@ -8,6 +8,7 @@ import Tabs from "@/components/ui/Tabs";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import { ColumnMenu, FilterSelect, Pagination, SearchInput, useCommandK } from "@/components/ui/inputs";
 import { Badge, Button } from "@/components/ui/primitives";
+import { ProductThumb } from "@/components/ui/ProductThumb";
 import { Icon } from "@/components/ui/Icon";
 import Modal, { Field, inputClass } from "@/components/ui/Modal";
 import MovementModal from "@/components/forms/MovementModal";
@@ -63,26 +64,6 @@ function Checkbox({ checked, onChange }: { checked: boolean; onChange: () => voi
     >
       {checked ? <Icon name="check" size={10} /> : null}
     </button>
-  );
-}
-
-/** Miniatura del producto: foto de R2 si existe; si no, el icono del catálogo. */
-function ProductThumb({ product }: { product: Product }) {
-  if (product.imageUrl) {
-    return (
-      <img
-        src={product.imageUrl}
-        alt={product.name}
-        className="size-[34px] shrink-0 rounded-[6px] bg-subtle object-cover"
-        loading="lazy"
-      />
-    );
-  }
-  if (product.icon === "product-illustration") return <Icon name="product-illustration" />;
-  return (
-    <span className="relative flex size-[34px] shrink-0 items-center justify-center overflow-hidden rounded-[6px] bg-subtle">
-      <Icon name={product.icon} size={20} />
-    </span>
   );
 }
 
@@ -289,7 +270,7 @@ export default function Inventario() {
       width: "flex-1 min-w-px",
       render: (row) => (
         <span className="flex items-center gap-[11px]">
-          <ProductThumb product={row} />
+          <ProductThumb imageUrl={row.imageUrl} icon={row.icon} name={row.name} />
           <span className="flex min-w-px flex-col gap-[2px] leading-[1.4]">
             <span className={`text-[13px] font-medium ${isSelected(row.id) ? "text-accent" : "text-ink"}`}>{row.name}</span>
             <span className={`text-[10px] ${isSelected(row.id) ? "text-accent-text" : "text-muted"}`}>{row.sku}</span>
@@ -400,7 +381,7 @@ export default function Inventario() {
         <Tabs items={tabs} active={view} onChange={setView} gap={22} />
 
         {/* Fila de búsqueda y filtros */}
-        <div className="flex items-center gap-[8px] p-[16px]">
+        <div className="flex flex-wrap items-center gap-[8px] p-[16px]">
           <SearchInput
             inputRef={searchRef}
             value={searchInput}
@@ -869,7 +850,7 @@ function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose:
       }
     >
       {error ? <p className="text-[12px] text-warn">{error}</p> : null}
-      <div className="grid grid-cols-2 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
         <Field label="SKU">
           <input className={inputClass} value={form.sku} onChange={update("sku")} placeholder="EMB-004" />
         </Field>

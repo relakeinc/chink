@@ -7,6 +7,7 @@ import { formatPercent, formatUnits } from "@/lib/format";
 import KpiStrip, { KpiValue, PageFooter, PageHeader } from "@/components/ui/KpiStrip";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import { Button, Card, LinkAction, ProgressBar, SectionHeader } from "@/components/ui/primitives";
+import { ProductThumb } from "@/components/ui/ProductThumb";
 import BarChart from "@/components/ui/BarChart";
 import { Icon } from "@/components/ui/Icon";
 import { useNotice } from "@/lib/toast";
@@ -50,10 +51,13 @@ export default function Inicio() {
       header: "Movimiento / Producto",
       width: "flex-1 min-w-px",
       render: (m) => (
-        <span className="flex flex-col gap-[3px] leading-[1.4]">
-          <span className="text-[13px] text-ink">{m.product}</span>
-          <span className="text-[10px] text-muted">
-            {m.ref} · {m.sku}
+        <span className="flex items-center gap-[11px]">
+          <ProductThumb imageUrl={m.imageUrl} name={m.product} />
+          <span className="flex min-w-px flex-col gap-[3px] leading-[1.4]">
+            <span className="text-[13px] text-ink">{m.product}</span>
+            <span className="text-[10px] text-muted">
+              {m.ref} · {m.sku}
+            </span>
           </span>
         </span>
       ),
@@ -105,13 +109,13 @@ export default function Inicio() {
       {summary.loading ? <LoadingBlock variant="kpi" /> : <KpiStrip items={kpis} />}
 
       <div className="flex flex-col gap-[20px]">
-        <div className="flex gap-[20px]">
-          <Card className="flex w-[1090px] shrink-0 flex-col gap-[20px] p-[20px]">
+        <div className="flex flex-col gap-[20px] xl:flex-row">
+          <Card className="flex w-full min-w-0 flex-col gap-[20px] p-[20px] xl:w-[1090px] xl:shrink-0">
             <SectionHeader title="Movimientos de la semana" subtitle="9–15 octubre · Entradas y salidas confirmadas" action={<LinkAction onClick={() => navigate("/reportes")}>Ver reportes</LinkAction>} />
             {weekly.loading ? <LoadingBlock variant="text" /> : <BarChart data={weekly.data?.data ?? []} max={chartMax} />}
           </Card>
 
-          <Card className="flex min-w-0 flex-1 flex-col gap-[20px] p-[20px]">
+          <Card className="flex w-full min-w-0 flex-col gap-[20px] p-[20px] xl:flex-1">
             <SectionHeader title="Stock bajo" subtitle={`${lowStock.data?.data.length ?? 0} referencias por debajo del mínimo`} action={<LinkAction onClick={() => navigate("/inventario")}>Ver inventario</LinkAction>} />
             <div className="flex flex-col">
               {(lowStock.data?.data ?? []).map((alert, index, list) => (
@@ -119,9 +123,7 @@ export default function Inicio() {
                   key={alert.sku}
                   className={`flex items-center gap-[12px] pb-[12px] ${index < list.length - 1 ? "border-b border-[rgba(51,56,48,0.2)]" : ""}`}
                 >
-                  <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[6px] bg-subtle">
-                    <Icon name="package-18" size={18} />
-                  </span>
+                  <ProductThumb imageUrl={alert.imageUrl} name={alert.name} />
                   <span className="flex min-w-px flex-1 flex-col gap-[4px]">
                     <span className="text-[13px] font-medium leading-[1.4] text-ink">{alert.name}</span>
                     <span className="text-[10px] leading-[1.4] text-muted">
@@ -137,8 +139,8 @@ export default function Inicio() {
           </Card>
         </div>
 
-        <div className="flex gap-[20px]">
-          <Card className="flex w-[1090px] shrink-0 flex-col overflow-hidden">
+        <div className="flex flex-col gap-[20px] xl:flex-row">
+          <Card className="flex w-full min-w-0 flex-col overflow-hidden xl:w-[1090px] xl:shrink-0">
             <div className="flex h-[66px] items-center justify-between px-[20px]">
               <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">Actividad reciente</h2>
               <LinkAction onClick={() => navigate("/movimientos")}>Ver movimientos</LinkAction>
@@ -155,7 +157,7 @@ export default function Inicio() {
             </div>
           </Card>
 
-          <Card className="flex flex-1 flex-col gap-[20px] p-[20px]">
+          <Card className="flex w-full min-w-0 flex-col gap-[20px] p-[20px] xl:flex-1">
             <SectionHeader title="Tus almacenes" subtitle={`${formatUnits(s?.totalStock ?? 0)} repartidas en ${sites.length} ubicaciones`} action={<LinkAction onClick={() => navigate("/almacenes")}>Ver almacenes</LinkAction>} />
             <div className="flex flex-col gap-[10px]">
               {sites.map((warehouse) => (

@@ -117,7 +117,7 @@ export default function Reportes() {
             <Button variant="dark" icon="mail" onClick={() => setShowEmail(true)}>
               Enviar por correo
             </Button>
-            <Button variant="primary" icon="download" onClick={exportSummary}>
+            <Button variant="primary" icon="download-ink" onClick={exportSummary}>
               Exportar resumen
             </Button>
           </>
@@ -127,8 +127,8 @@ export default function Reportes() {
       {summary.error ? <ErrorBlock message={summary.error} onRetry={() => void summary.reload()} /> : summary.loading ? <LoadingBlock variant="kpi" /> : <KpiStrip items={kpis} />}
 
       <div className="flex flex-col gap-[20px]">
-        <div className="flex gap-[20px]">
-          <Card className="flex w-[1090px] shrink-0 flex-col gap-[20px] p-[20px]">
+        <div className="flex flex-col gap-[20px] xl:flex-row">
+          <Card className="flex w-full min-w-0 flex-col gap-[20px] p-[20px] xl:w-[1090px] xl:shrink-0">
             <SectionHeader title="Entradas y salidas" subtitle="9–15 octubre 2026 · Todos los almacenes" action={<span className="text-[11px] font-semibold text-ink">{reports.length ? "12 movimientos" : ""}</span>} />
             {weekly.loading ? <LoadingBlock variant="text" /> : <BarChart data={weekly.data?.data ?? []} max={chartMax} />}
             {s ? (
@@ -141,7 +141,7 @@ export default function Reportes() {
             ) : null}
           </Card>
 
-          <Card className="flex min-w-0 flex-1 flex-col gap-[20px] p-[20px]">
+          <Card className="flex w-full min-w-0 flex-col gap-[20px] p-[20px] xl:flex-1">
             <SectionHeader title="Stock por categoría" subtitle={`Distribución de las ${formatUnits(categories.data?.total ?? 0).replace(" u.", "")} unidades actuales`} />
             <div className="flex flex-col gap-[8px]">
               {(categories.data?.data ?? []).map((category, index) => (
