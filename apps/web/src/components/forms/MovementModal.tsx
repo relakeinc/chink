@@ -136,7 +136,7 @@ export default function MovementModal({ open, onClose, initialType = "ENTRY", in
     >
       {error ? <p className="text-[12px] text-warn">{error}</p> : null}
 
-      <div className="grid grid-cols-2 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
         {initialType !== "TRANSFER" ? (
           <Field label="Tipo">
             <FilterSelect

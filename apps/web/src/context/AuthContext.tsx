@@ -16,6 +16,21 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+/** Lee `exp` del JWT sin verificarlo: basta para no usar un token muerto. */
+function tokenExpired(): boolean {
+  try {
+    const parts = (getToken() ?? "").split(".");
+    if (parts.length !== 3 || !parts[1]) return true;
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "="))) as {
+      exp?: unknown;
+    };
+    return typeof payload.exp !== "number" || payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -27,7 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function restore() {
-      if (!getToken()) {
+      // Token caducado: se descarta en local sin pedir a /me (evita 401s).
+      if (!getToken() || tokenExpired()) {
+        setToken(null);
         setLoading(false);
         return;
       }

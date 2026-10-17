@@ -81,7 +81,7 @@ export default function WarehouseModal({ open, onClose, onDone }: WarehouseModal
     >
       {error ? <p className="text-[12px] text-warn">{error}</p> : null}
 
-      <div className="grid grid-cols-2 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
         <label className="flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Código</span>
           <input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} placeholder="ALM-004" />
@@ -192,7 +192,7 @@ export function InviteModal({ open, onClose, matrix, warehouseOptions, onDone }:
     >
       {error ? <p className="text-[12px] text-warn">{error}</p> : null}
 
-      <div className="grid grid-cols-2 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
         <label className="flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Nombre</span>
           <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="Pablo Vidal" />

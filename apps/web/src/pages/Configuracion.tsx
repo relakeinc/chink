@@ -154,9 +154,9 @@ export default function Configuracion() {
         <Tabs items={VIEW_TABS} active={view} onChange={setView} />
 
         {view === "preferencias" ? (
-        <div className="flex gap-[32px] p-[24px]">
+        <div className="flex flex-col gap-[32px] p-[24px] xl:flex-row">
           {/* Columna izquierda: formulario */}
-          <div className="flex w-[1070px] shrink-0 flex-col gap-[24px]">
+          <div className="flex w-full min-w-0 flex-col gap-[24px] xl:w-[1070px] xl:shrink-0">
             {SECTIONS.map((section, index) => (
               <section
                 key={section.title}
@@ -168,7 +168,7 @@ export default function Configuracion() {
                   <p className="mt-[4px] text-[11px] leading-[1.4] text-muted">{section.description}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-[20px] gap-y-[16px]">
+                <div className="grid grid-cols-1 gap-x-[20px] gap-y-[16px] md:grid-cols-2">
                   {section.fields.map((field) => {
                     const optionList: { value: string; label: string }[] =
                       field === "defaultWarehouseId" ? warehouseOptions : (options[field] ?? []).map((option) => ({ value: option, label: option }));
@@ -368,7 +368,7 @@ function SecurityPanel() {
   }
 
   return (
-    <div className="grid max-w-[900px] grid-cols-2 gap-[20px]">
+    <div className="grid max-w-[900px] grid-cols-1 gap-[20px] md:grid-cols-2">
       <div className="flex flex-col gap-[14px] rounded-[8px] bg-surface p-[20px]">
         <div>
           <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">Cambiar contraseña</h2>

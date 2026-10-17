@@ -24,7 +24,7 @@ export function SearchInput({ value, onChange, placeholder, width = 300, inputRe
 
   return (
     <div
-      className="flex shrink-0 items-center gap-[8px] rounded-[6px] border border-[rgba(51,56,48,0.2)] bg-subtle px-[12px]"
+      className="flex max-w-full shrink-0 items-center gap-[8px] rounded-[6px] border border-[rgba(51,56,48,0.2)] bg-subtle px-[12px]"
       style={{ height: 36, width }}
     >
       <Icon name="search-sm" size={14} />

@@ -20,7 +20,7 @@ export interface KpiStripProps {
  */
 export default function KpiStrip({ items, tileLast = false }: KpiStripProps) {
   return (
-    <div className="flex min-h-[87px] items-start rounded-[10px] bg-canvas px-[22px] py-[18px]">
+    <div className="grid min-h-[87px] grid-cols-2 gap-x-[16px] gap-y-[18px] rounded-[10px] bg-canvas px-[22px] py-[18px] md:flex md:gap-0">
       {items.map((item, index) => {
         const isFirst = index === 0;
         const isLast = index === items.length - 1;
@@ -38,7 +38,7 @@ export default function KpiStrip({ items, tileLast = false }: KpiStripProps) {
 
         if (tileLast && isLast) {
           return (
-            <div key={item.label} className="min-w-px flex-1 pl-[20px]">
+            <div key={item.label} className="min-w-px flex-1 md:pl-[20px]">
               <div className="anim-fade-up anim-delay flex h-full items-center justify-center rounded-[8px] bg-subtle px-[12px] text-center" style={{ "--anim-delay": delay } as React.CSSProperties}>
                 {body}
               </div>
@@ -51,8 +51,8 @@ export default function KpiStrip({ items, tileLast = false }: KpiStripProps) {
             key={item.label}
             className={[
               "anim-fade-up anim-delay flex min-w-px flex-1 flex-col",
-              isFirst ? "" : "pl-[20px]",
-              isLast ? "border-r-0" : "border-r border-[rgba(51,56,48,0.2)]",
+              isFirst ? "" : "md:pl-[20px]",
+              isLast ? "md:border-r-0" : "md:border-r md:border-[rgba(51,56,48,0.2)]",
             ].join(" ")}
             style={{ "--anim-delay": delay } as React.CSSProperties}
           >
@@ -80,9 +80,9 @@ export function PageFooter({ left, right }: { left: ReactNode; right: ReactNode 
 
 export function PageHeader({ title, description, actions }: { title: string; description: string; actions?: ReactNode }) {
   return (
-    <header className="flex min-h-[82px] animate-[chink-fade-in_280ms_cubic-bezier(0.22,1,0.36,1)_both] items-center justify-between gap-[12px]">
+    <header className="flex min-h-[82px] animate-[chink-fade-in_280ms_cubic-bezier(0.22,1,0.36,1)_both] flex-wrap items-center justify-between gap-[12px]">
       <div className="min-w-0">
-        <h1 className="font-outfit text-[30px] leading-[1.15] font-bold text-ink">{title}</h1>
+        <h1 className="font-outfit text-[24px] leading-[1.15] font-bold text-ink md:text-[30px]">{title}</h1>
         <p className="mt-[6px] text-[13px] leading-[1.5] text-muted">{description}</p>
       </div>
       {actions ? <div className="flex shrink-0 items-start gap-[10px]">{actions}</div> : null}
