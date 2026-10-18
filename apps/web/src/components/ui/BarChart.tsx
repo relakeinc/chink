@@ -68,7 +68,7 @@ export default function BarChart({ data, max, height = 190 }: BarChartProps) {
                   />
                 </div>
                 <span
-                  className="anim-fade-up anim-delay text-[10px] leading-[1.4] text-muted"
+                  className={`anim-fade-up anim-delay text-[10px] leading-[1.4] text-muted ${index % 2 === 1 ? "hidden md:block" : ""}`}
                   style={{ "--anim-delay": `${200 + index * 45}ms` } as React.CSSProperties}
                 >
                   {point.day}

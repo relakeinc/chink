@@ -11,6 +11,8 @@ interface DateRangePickerProps {
   onChange: (range: DateRange) => void;
   /** Etiqueta cuando no hay rango elegido. */
   placeholder?: string;
+  /** Solo icono de calendario (barra móvil): abre el mismo calendario. */
+  compact?: boolean;
 }
 
 const WEEKDAYS = ["L", "M", "X", "J", "V", "S", "D"];
@@ -62,7 +64,7 @@ const PRESETS: { label: string; range: () => DateRange }[] = [
  * diálogo con el estilo del sistema operativo, que es justo lo que queremos
  * evitar.
  */
-export default function DateRangePicker({ value, onChange, placeholder = "Todas las fechas" }: DateRangePickerProps) {
+export default function DateRangePicker({ value, onChange, placeholder = "Todas las fechas", compact = false }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<DateRange>(value);
   const [cursor, setCursor] = useState(() => {
@@ -79,6 +81,13 @@ export default function DateRangePicker({ value, onChange, placeholder = "Todas 
     if (open) setPending(value);
   }, [open, value]);
 
+  // La barra móvil emite este evento: el calendario visible se abre.
+  useEffect(() => {
+    const openCalendar = () => setOpen(true);
+    window.addEventListener("chink:open-range", openCalendar);
+    return () => window.removeEventListener("chink:open-range", openCalendar);
+  }, []);
+
   const today = iso(new Date());
 
   return (
@@ -88,10 +97,15 @@ export default function DateRangePicker({ value, onChange, placeholder = "Todas 
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-label={compact ? placeholder : undefined}
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-[36px] items-center gap-[10px] rounded-[6px] border border-line-strong bg-ink px-[12px] text-[12px] leading-[1.4] whitespace-nowrap text-canvas transition-colors hover:bg-shell"
+        className={
+          compact
+            ? "flex size-[36px] items-center justify-center rounded-[6px] border border-line-strong bg-ink text-canvas transition-colors hover:bg-shell"
+            : "flex h-[36px] items-center gap-[10px] rounded-[6px] border border-line-strong bg-ink px-[12px] text-[12px] leading-[1.4] whitespace-nowrap text-canvas transition-colors hover:bg-shell"
+        }
       >
-        {formatRange(value, placeholder)}
+        {compact ? null : formatRange(value, placeholder)}
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true" className="shrink-0">
           <path
             d="M5 1.25V3.75M10 1.25V3.75M1.875 6.25H13.125M5 8.75H5.006M7.5 8.75H7.506M10 8.75H10.006M5 11.25H5.006M7.5 11.25H7.506M10 11.25H10.006M3.125 2.5H11.875C12.565 2.5 13.125 3.06 13.125 3.75V12.5C13.125 13.19 12.565 13.75 11.875 13.75H3.125C2.435 13.75 1.875 13.19 1.875 12.5V3.75C1.875 3.06 2.435 2.5 3.125 2.5Z"

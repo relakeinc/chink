@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Icon } from "./Icon";
 import { Button } from "./primitives";
 import { PopoverPortal, useDismissOnOutside, usePopoverAnchor } from "./Popover";
 
 /* -------------------------------------------------------------- Búsqueda */
+
+/** Evento global para sincronizar buscadores entre la barra móvil y la página. */
+const SEARCH_EVENT = "chink:search";
 
 interface SearchInputProps {
   value: string;
@@ -12,9 +15,17 @@ interface SearchInputProps {
   /** Ancho en px; el diseño usa 272 en Inventario y 300 en el resto. */
   width?: number;
   inputRef?: React.RefObject<HTMLInputElement | null>;
+  /** Ocupa todo el ancho disponible (barra móvil). */
+  fluid?: boolean;
 }
 
-export function SearchInput({ value, onChange, placeholder, width = 300, inputRef }: SearchInputProps) {
+export function SearchInput({ value, onChange, placeholder, width = 300, inputRef, fluid = false }: SearchInputProps) {
+  const instanceId = useId();
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
   // La lupa global del TopBar emite este evento para enfocar la búsqueda visible.
   useEffect(() => {
     const focus = () => inputRef?.current?.focus();
@@ -22,20 +33,46 @@ export function SearchInput({ value, onChange, placeholder, width = 300, inputRe
     return () => window.removeEventListener("chink:focus-search", focus);
   }, [inputRef]);
 
+  // Sincronización entre instancias (barra móvil <-> página): cada edición se
+  // emite con el id propio y cada instancia adopta solo las ajenas.
+  useEffect(() => {
+    const adopt = (event: Event) => {
+      const detail = (event as CustomEvent<{ value?: unknown; source?: unknown }>).detail;
+      if (!detail || detail.source === instanceId || typeof detail.value !== "string") return;
+      if (detail.value !== valueRef.current) onChangeRef.current(detail.value);
+    };
+    window.addEventListener(SEARCH_EVENT, adopt as EventListener);
+    return () => window.removeEventListener(SEARCH_EVENT, adopt as EventListener);
+  }, [instanceId]);
+
+  function handleChange(next: string) {
+    onChange(next);
+    window.dispatchEvent(new CustomEvent(SEARCH_EVENT, { detail: { value: next, source: instanceId } }));
+  }
+
+  // Al montar, publica el valor actual para alinear a las demás instancias.
+  useEffect(() => {
+    if (valueRef.current) {
+      window.dispatchEvent(new CustomEvent(SEARCH_EVENT, { detail: { value: valueRef.current, source: instanceId } }));
+    }
+    // Solo al montar: el resto del tiempo manda lo que escribe el usuario.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instanceId]);
+
   return (
     <div
       className="flex max-w-full shrink-0 items-center gap-[8px] rounded-[6px] border border-[rgba(51,56,48,0.2)] bg-subtle px-[12px]"
-      style={{ height: 36, width }}
+      style={fluid ? { height: 36, width: "100%" } : { height: 36, width }}
     >
       <Icon name="search-sm" size={14} />
       <input
         ref={inputRef}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => handleChange(event.target.value)}
         placeholder={placeholder}
         className="min-w-px flex-1 bg-transparent text-[12px] leading-[1.4] text-ink outline-none placeholder:text-muted"
       />
-      <kbd className="shrink-0 text-[10px] leading-[1.4] text-line-strong">⌘ K</kbd>
+      <kbd className="hidden shrink-0 text-[10px] leading-[1.4] text-line-strong sm:block">⌘ K</kbd>
     </div>
   );
 }

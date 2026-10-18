@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import MobileNav from "./MobileNav";
+import MobileSearchBar from "./MobileSearchBar";
 
 /**
  * Shell de la aplicación.
@@ -16,9 +17,10 @@ export default function AppLayout() {
     <div className="h-screen w-full overflow-hidden bg-canvas">
       <Sidebar />
       <TopBar />
+      <MobileSearchBar />
       <MobileNav />
 
-      <main className="mr-0 mt-[55px] ml-0 h-[calc(100vh-55px)] overflow-hidden overscroll-none md:mr-[25px] md:ml-[104px]">
+      <main className="mr-0 mt-[100px] ml-0 h-[calc(100vh-100px)] overflow-hidden overscroll-none md:mr-[25px] md:mt-[55px] md:ml-[104px] md:h-[calc(100vh-55px)]">
         <div className="flex h-full flex-col overflow-hidden rounded-tl-[10px] rounded-tr-[10px] bg-subtle">
           <div className="scroll-thin min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-[16px] pt-[10px] pb-[96px] md:px-[20px] md:pb-[20px]">
             <div className="flex flex-col gap-[20px]">

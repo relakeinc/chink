@@ -4,7 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { useAsync } from "@/lib/useAsync";
-import { PopoverPortal, useDismissOnOutside, usePopoverAnchor } from "@/components/ui/Popover";
+import { PopoverPortal, useDismissOnOutside, usePopoverAnchor, OverlayPortal } from "@/components/ui/Popover";
 import { onWorkspaceUpdated, workspaceMark } from "@/lib/workspace";
 
 interface NavItem {
@@ -234,8 +234,8 @@ function SidebarLink({ item }: { item: NavItem }) {
 }
 
 /**
- * Cajón del espacio en móvil: se abre desde el conmutador del TopBar y ofrece
- * lo mismo que el menú de escritorio (sin modales, deslizando desde la izquierda).
+ * Hoja inferior del espacio en móvil: se abre desde el conmutador del TopBar
+ * y ofrece lo mismo que el menú de escritorio, subiendo desde abajo.
  */
 export function WorkspaceDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ws = useWorkspaceMenu();
@@ -252,23 +252,42 @@ export function WorkspaceDrawer({ open, onClose }: { open: boolean; onClose: () 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Espacio de trabajo">
-      <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 cursor-default bg-ink/40" />
-      <div className="anim-pop absolute top-0 left-0 flex h-full w-[280px] flex-col gap-[8px] overflow-y-auto bg-canvas p-[16px] shadow-xl">
-        <div className="flex items-center gap-[10px] px-[4px] pt-[4px] pb-[10px]">
-          <Icon name={ws.mark} size={36} />
-          <span className="flex min-w-0 flex-1 flex-col items-start">
-            <span className="truncate text-[14px] font-semibold text-ink">{ws.spaceName}</span>
-            {ws.legalName ? <span className="truncate text-[10px] text-muted">{ws.legalName}</span> : null}
-          </span>
-          <button type="button" aria-label="Cerrar" onClick={onClose} className="flex size-[28px] shrink-0 items-center justify-center rounded-full bg-subtle text-[14px] text-muted">
-            ×
+    <OverlayPortal>
+      <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Espacios de trabajo">
+        <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 cursor-default bg-ink/40" />
+        <div className="anim-sheet-up absolute right-0 bottom-0 left-0 max-h-[85vh] overflow-y-auto rounded-t-[20px] bg-canvas px-[20px] pt-[10px] pb-[28px] shadow-xl">
+          <div className="mx-auto mb-[10px] h-[4px] w-[40px] rounded-full bg-line" />
+          <h2 className="pb-[12px] text-center text-[16px] font-semibold text-ink">Espacios de trabajo</h2>
+          <button
+            type="button"
+            aria-current="true"
+            onClick={onClose}
+            className="flex w-full items-center gap-[12px] rounded-[12px] bg-subtle px-[12px] py-[12px] text-left"
+          >
+            <Icon name={ws.mark} size={32} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[14px] font-semibold text-ink">{ws.spaceName}</span>
+              {ws.legalName ? <span className="block truncate text-[11px] text-muted">{ws.legalName}</span> : null}
+            </span>
+            <span aria-hidden className="flex size-[22px] items-center justify-center rounded-full bg-ink text-[12px] font-bold text-canvas">
+              ✓
+            </span>
           </button>
-        </div>
-        <div role="menu" aria-label="Espacio de trabajo" className="flex flex-col border-t border-[rgba(51,56,48,0.2)] pt-[8px]">
-          <WorkspaceMenuItems ws={ws} onNavigate={onClose} />
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              ws.go("/configuracion?seccion=espacio");
+            }}
+            className="mt-[14px] flex w-full items-center justify-center gap-[8px] rounded-[10px] bg-ink px-[12px] py-[13px] text-[14px] font-semibold text-canvas transition-opacity active:opacity-90"
+          >
+            <span aria-hidden className="text-[16px] leading-none">+</span> Nuevo espacio
+          </button>
+          <p className="px-[4px] pt-[10px] text-center text-[11px] leading-[1.5] text-muted">
+            Los espacios separan equipos y datos. Hoy hay un solo espacio en esta cuenta.
+          </p>
         </div>
       </div>
-    </div>
+    </OverlayPortal>
   );
 }

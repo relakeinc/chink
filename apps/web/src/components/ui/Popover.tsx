@@ -30,6 +30,21 @@ const GAP = 4;
 const MARGIN = 8;
 
 /**
+ * Portal genérico para capas de pantalla completa (hojas, cajones): las saca
+ * del apilado del ancestro (p. ej. un header `fixed` con z-index propio) para
+ * que siempre queden por encima del contenido.
+ */
+export function OverlayPortal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+  if (typeof document === "undefined" || !mounted) return null;
+  return createPortal(<>{children}</>, document.body);
+}
+
+/**
  * Mide el disparador y devuelve la posición `fixed` del panel, corrigiendo el
  * desbordamiento horizontal y volteando arriba cuando no cabe abajo.
  * Con `side: "right"` el panel se ancla a la derecha del disparador, como el

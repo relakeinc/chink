@@ -5,12 +5,12 @@ import { Icon } from "@/components/ui/Icon";
 import { api } from "@/lib/api";
 import { useAsync } from "@/lib/useAsync";
 import { onWorkspaceUpdated, workspaceMark } from "@/lib/workspace";
-import { PopoverPortal, useDismissOnOutside, usePopoverAnchor } from "@/components/ui/Popover";
+import { PopoverPortal, useDismissOnOutside, usePopoverAnchor, OverlayPortal } from "@/components/ui/Popover";
 import { showNotice } from "@/lib/toast";
 import { WorkspaceDrawer } from "./Sidebar";
 
 export default function TopBar() {
-  const { user, logout } = useAuth();
+  const { user, logout, can } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -117,6 +117,16 @@ export default function TopBar() {
             >
               Configuración del espacio
             </button>
+            {can("admin") ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => go("/equipo")}
+                className="w-full rounded-[5px] px-[8px] py-[6px] text-left text-[12px] text-ink hover:bg-subtle"
+              >
+                Gestionar equipo
+              </button>
+            ) : null}
             <button
               type="button"
               role="menuitem"
@@ -128,11 +138,12 @@ export default function TopBar() {
           </div>
         </PopoverPortal>
 
-        {/* Móvil: hoja inferior estilo app. */}
+        {/* Móvil: hoja inferior estilo app, por portal para quedar sobre el dock. */}
         {sheetOpen ? (
-          <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Cuenta">
-            <button type="button" aria-label="Cerrar" onClick={() => setSheetOpen(false)} className="absolute inset-0 cursor-default bg-ink/40" />
-            <div className="anim-pop absolute right-0 bottom-0 left-0 rounded-t-[20px] bg-canvas px-[20px] pt-[10px] pb-[28px] shadow-xl">
+          <OverlayPortal>
+            <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Cuenta">
+              <button type="button" aria-label="Cerrar" onClick={() => setSheetOpen(false)} className="absolute inset-0 cursor-default bg-ink/40" />
+              <div className="anim-sheet-up absolute right-0 bottom-0 left-0 rounded-t-[20px] bg-canvas px-[20px] pt-[10px] pb-[28px] shadow-xl">
               <div className="mx-auto mb-[14px] h-[4px] w-[40px] rounded-full bg-line" />
               <div className="flex flex-col items-center gap-[6px] pb-[14px]">
                 <span className="flex size-[64px] items-center justify-center rounded-full bg-surface text-[18px] font-semibold text-ink">
@@ -170,6 +181,7 @@ export default function TopBar() {
               </div>
             </div>
           </div>
+          </OverlayPortal>
         ) : null}
       </div>
       <span className="sr-only">{location.pathname}</span>
