@@ -44,7 +44,7 @@ export default function MobileNav() {
 
   return (
     <>
-      <nav aria-label="Navegación principal" className="fixed bottom-[14px] left-1/2 z-40 flex -translate-x-1/2 items-center gap-[2px] rounded-[22px] border border-[rgba(51,56,48,0.12)] bg-canvas px-[8px] py-[6px] shadow-xl md:hidden">
+      <nav aria-label="Navegación principal" className="fixed bottom-[14px] left-1/2 z-40 flex -translate-x-1/2 items-center gap-[2px] rounded-[22px] border border-edge/60 bg-canvas px-[8px] py-[6px] shadow-xl md:hidden">
         {dock.map((item) => (
           <NavLink
             key={item.to}
@@ -80,7 +80,7 @@ export default function MobileNav() {
       {allOpen ? (
         <OverlayPortal>
           <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Todas las secciones">
-            <button type="button" aria-label="Cerrar" onClick={() => setAllOpen(false)} className="anim-fade-in absolute inset-0 cursor-default bg-ink/40" />
+            <button type="button" aria-label="Cerrar" onClick={() => setAllOpen(false)} className="anim-fade-in absolute inset-0 cursor-default bg-black/40" />
             <div className="anim-sheet-up absolute right-0 bottom-0 left-0 rounded-t-[20px] bg-canvas px-[20px] pt-[10px] pb-[28px] shadow-xl">
               <div className="mx-auto mb-[14px] h-[4px] w-[40px] rounded-full bg-line" />
               <div className="mb-[12px] flex items-center justify-between px-[4px]">

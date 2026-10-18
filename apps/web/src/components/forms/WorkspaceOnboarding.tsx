@@ -8,7 +8,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/primitives";
 
 const fieldClass =
-  "h-[38px] w-full rounded-[6px] border border-[rgba(51,56,48,0.2)] bg-canvas px-[12px] text-[12px] text-ink outline-none focus:border-ink";
+  "h-[38px] w-full rounded-[6px] border border-edge bg-canvas px-[12px] text-[12px] text-ink outline-none focus:border-ink";
 
 const STEPS = ["Espacio", "Contacto", "Icono", "Resumen"] as const;
 
@@ -138,7 +138,7 @@ export default function WorkspaceOnboarding({ open, onClose }: { open: boolean; 
                     aria-pressed={active}
                     onClick={() => setForm((prev) => ({ ...prev, spaceMark: mark.id, }))}
                     className={`flex size-[52px] items-center justify-center rounded-[10px] border bg-canvas transition-transform hover:scale-105 ${
-                      active ? "border-ink ring-2 ring-ink/30" : "border-[rgba(51,56,48,0.2)]"
+                      active ? "border-ink ring-2 ring-ink/30" : "border-edge"
                     }`}
                   >
                     <Icon name={mark.id} size={32} />

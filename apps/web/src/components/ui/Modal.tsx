@@ -14,7 +14,7 @@ export default function Modal({ open, title, description, onClose, children, foo
   if (!open) return null;
 
   return (
-    <div style={{ zIndex: LAYERS.modal }} className="fixed inset-0 flex items-center justify-center bg-ink/40 p-[20px]">
+    <div style={{ zIndex: LAYERS.modal }} className="fixed inset-0 flex items-center justify-center bg-black/40 p-[20px]">
       {/* El fondo usa opacidad pura para poder transicionar sin `backdrop-filter`. */}
       <button type="button" aria-label="Cerrar" onClick={onClose} className="anim-fade-in absolute inset-0 cursor-default" />
       <div className="anim-pop relative w-full max-w-[520px] rounded-[10px] bg-canvas p-[20px] shadow-xl">
@@ -52,4 +52,4 @@ export function Field({ label, children, helper }: { label: string; children: Re
 }
 
 export const inputClass =
-  "h-[38px] rounded-[6px] border border-[rgba(51,56,48,0.2)] bg-subtle px-[12px] text-[12px] leading-[1.4] text-ink outline-none focus:border-ink";
+  "h-[38px] rounded-[6px] border border-edge bg-subtle px-[12px] text-[12px] leading-[1.4] text-ink outline-none focus:border-ink";

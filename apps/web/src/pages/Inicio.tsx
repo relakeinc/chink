@@ -14,6 +14,23 @@ import { useNotice } from "@/lib/toast";
 import DateRangePicker from "@/components/ui/DateRangePicker";
 import type { DateRange } from "@/components/ui/DateRangePicker";
 import MovementModal from "@/components/forms/MovementModal";
+import { useTheme } from "@/lib/theme";
+
+/** Saludo temporal junto a la calabaza: solo existe con Halloween activo. */
+function HalloweenGreeting() {
+  const { theme } = useTheme();
+  if (theme !== "halloween") return null;
+  return (
+    <div className="anim-fade-up flex items-center gap-[12px] rounded-[10px] border border-edge bg-surface px-[16px] py-[12px]">
+      <Icon name="pumpkin" size={40} className="anim-hw-flicker shrink-0" />
+      <p className="text-[13px] leading-[1.5] text-ink">
+        <span className="font-outfit text-[15px] font-semibold">¡Feliz Halloween!</span>
+        <br />
+        <span className="text-muted">Tus calabazas están contadas: ni una unidad se escapa sin registrar.</span>
+      </p>
+    </div>
+  );
+}
 
 export default function Inicio() {
   const [range, setRange] = useState<DateRange>({ from: null, to: null });
@@ -93,6 +110,7 @@ export default function Inicio() {
 
   return (
     <>
+      <HalloweenGreeting />
       <PageHeader
         title="Inicio"
         description="Todo en su sitio. El pulso de tu inventario, de un vistazo."
@@ -121,7 +139,7 @@ export default function Inicio() {
               {(lowStock.data?.data ?? []).map((alert, index, list) => (
                 <div
                   key={alert.sku}
-                  className={`flex items-center gap-[12px] pb-[12px] ${index < list.length - 1 ? "border-b border-[rgba(51,56,48,0.2)]" : ""}`}
+                  className={`flex items-center gap-[12px] pb-[12px] ${index < list.length - 1 ? "border-b border-edge" : ""}`}
                 >
                   <ProductThumb imageUrl={alert.imageUrl} name={alert.name} />
                   <span className="flex min-w-px flex-1 flex-col gap-[4px]">

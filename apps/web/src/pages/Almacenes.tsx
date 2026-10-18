@@ -156,7 +156,7 @@ export default function Almacenes() {
                 <span className="text-muted">{formatUnits(warehouse.reserved)} reservadas</span>
               </div>
 
-              <div className="flex items-center justify-between border-t border-[rgba(51,56,48,0.2)] pt-[12px] text-[11px]">
+              <div className="flex items-center justify-between border-t border-edge pt-[12px] text-[11px]">
                 <span className="text-muted">Responsable: {warehouse.owner}</span>
                 <LinkAction onClick={() => navigate(`/movimientos?almacen=${warehouse.code}`)}>Ver almacén</LinkAction>
               </div>

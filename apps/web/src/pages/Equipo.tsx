@@ -214,7 +214,7 @@ export default function Equipo() {
           >
             <span
               className={`flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border ${
-                granted ? "border-accent bg-accent" : "border-[rgba(65,72,58,0.2)] bg-subtle"
+                granted ? "border-accent bg-accent" : "border-edge bg-subtle"
               }`}
             >
               {granted ? <Icon name="check" size={10} /> : null}

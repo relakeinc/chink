@@ -101,8 +101,8 @@ export default function DateRangePicker({ value, onChange, placeholder = "Todas 
         onClick={() => setOpen((prev) => !prev)}
         className={
           compact
-            ? "pressable flex size-[36px] items-center justify-center rounded-[6px] border border-line-strong bg-ink text-canvas transition-colors hover:bg-shell"
-            : "pressable flex h-[36px] items-center gap-[10px] rounded-[6px] border border-line-strong bg-ink px-[12px] text-[12px] leading-[1.4] whitespace-nowrap text-canvas transition-colors hover:bg-shell"
+            ? "pressable flex size-[36px] items-center justify-center rounded-[6px] border border-line-strong bg-coal text-cream transition-colors hover:bg-shell"
+            : "pressable flex h-[36px] items-center gap-[10px] rounded-[6px] border border-line-strong bg-coal px-[12px] text-[12px] leading-[1.4] whitespace-nowrap text-cream transition-colors hover:bg-shell"
         }
       >
         {compact ? null : formatRange(value, placeholder)}
@@ -117,7 +117,7 @@ export default function DateRangePicker({ value, onChange, placeholder = "Todas 
       </button>
 
       {/* Portal a `body`: dentro de `main` el calendario quedaría recortado. */}
-      <PopoverPortal anchor={anchor} className="flex flex-col rounded-[8px] border border-[rgba(51,56,48,0.2)] bg-canvas p-[12px] shadow-lg">
+      <PopoverPortal anchor={anchor} className="flex flex-col rounded-[8px] border border-edge bg-canvas p-[12px] shadow-lg">
         <div ref={panelRef} role="dialog" aria-label="Rango de fechas" className="anim-pop min-h-0 w-[268px] overflow-y-auto">
           {/* Cabecera del mes */}
           <div className="mb-[10px] flex items-center justify-between">
@@ -167,7 +167,7 @@ export default function DateRangePicker({ value, onChange, placeholder = "Todas 
                   className={[
                     "flex h-[28px] items-center justify-center rounded-[4px] text-[11px] leading-[1.4] transition-colors",
                     inRange ? "bg-subtle text-ink" : "text-ink hover:bg-subtle",
-                    isEdge ? "bg-ink font-semibold text-canvas hover:bg-ink" : "",
+                    isEdge ? "bg-coal font-semibold text-cream hover:bg-coal" : "",
                     key === today ? "underline underline-offset-2" : "",
                   ].join(" ")}
                 >
@@ -178,7 +178,7 @@ export default function DateRangePicker({ value, onChange, placeholder = "Todas 
           </div>
 
           {/* Atajos y acciones */}
-          <div className="mt-[10px] flex flex-wrap gap-[4px] border-t border-[rgba(51,56,48,0.2)] pt-[10px]">
+          <div className="mt-[10px] flex flex-wrap gap-[4px] border-t border-edge pt-[10px]">
             {PRESETS.map((preset) => (
               <button
                 key={preset.label}
@@ -213,7 +213,7 @@ export default function DateRangePicker({ value, onChange, placeholder = "Todas 
                 onChange(pending);
                 setOpen(false);
               }}
-              className="rounded-[5px] bg-ink px-[10px] py-[4px] text-[11px] font-semibold text-canvas transition-opacity hover:opacity-90"
+              className="rounded-[5px] bg-coal px-[10px] py-[4px] text-[11px] font-semibold text-cream transition-opacity hover:opacity-90"
             >
               Aplicar
             </button>

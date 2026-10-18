@@ -29,7 +29,7 @@ export default function BarChart({ data, max, height = 190 }: BarChartProps) {
           <span className="text-[11px] leading-[1.4] text-muted">Entradas · {totalEntries} u.</span>
         </span>
         <span className="flex items-center gap-[6px]">
-          <span className="size-[8px] rounded-[2px] bg-shell" />
+          <span className="size-[8px] rounded-[2px] bg-exits" />
           <span className="text-[11px] leading-[1.4] text-muted">Salidas · {totalExits} u.</span>
         </span>
         <span className="text-[10px] leading-[1.4] text-muted">Unidades</span>
@@ -47,7 +47,7 @@ export default function BarChart({ data, max, height = 190 }: BarChartProps) {
           {[0, 0.5, 1].map((ratio) => (
             <span
               key={ratio}
-              className="anim-fade-up absolute left-0 w-full bg-[rgba(51,56,48,0.2)]"
+              className="anim-fade-up absolute left-0 w-full bg-edge"
               style={{ height: 1, top: `${ratio * 100}%`, "--anim-delay": `${ratio * 60}ms` } as React.CSSProperties}
             />
           ))}
@@ -63,7 +63,7 @@ export default function BarChart({ data, max, height = 190 }: BarChartProps) {
                     style={{ height: Math.max((point.entries / max) * height, 1), "--anim-delay": `${120 + index * 45}ms` } as React.CSSProperties}
                   />
                   <span
-                    className="anim-grow-y anim-delay w-[25px] rounded-t-[3px] bg-shell"
+                    className="anim-grow-y anim-delay w-[25px] rounded-t-[3px] bg-exits"
                     style={{ height: Math.max((point.exits / max) * height, 1), "--anim-delay": `${150 + index * 45}ms` } as React.CSSProperties}
                   />
                 </div>

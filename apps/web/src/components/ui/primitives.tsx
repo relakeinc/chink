@@ -14,9 +14,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-ink font-bold",
-  dark: "bg-ink text-canvas font-semibold border border-line-strong",
-  filter: "bg-ink text-canvas font-normal border border-line-strong",
+  primary: "bg-accent text-coal font-bold",
+  dark: "bg-coal text-cream font-semibold border border-line-strong",
+  filter: "bg-coal text-cream font-normal border border-line-strong",
   ghost: "bg-transparent text-ink font-semibold",
 };
 
@@ -118,7 +118,7 @@ export function LinkAction({ children, onClick }: { children: ReactNode; onClick
     <button
       type="button"
       onClick={onClick}
-      className="pressable -mx-[6px] -my-[3px] shrink-0 rounded-[5px] px-[6px] py-[3px] text-[11px] font-semibold text-ink transition-colors duration-150 hover:bg-subtle active:bg-subtle"
+      className="link-action pressable -mx-[6px] -my-[3px] shrink-0 rounded-[5px] px-[6px] py-[3px] text-[11px] font-semibold text-ink transition-colors duration-150 hover:bg-subtle active:bg-subtle"
     >
       {children}
     </button>
@@ -149,7 +149,7 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (next: 
       aria-checked={on}
       aria-label={label}
       onClick={() => onChange(!on)}
-      className={`relative h-[20px] w-[34px] shrink-0 rounded-[100px] transition-colors ${on ? "bg-ink" : "bg-subtle border border-line-strong"}`}
+      className={`relative h-[20px] w-[34px] shrink-0 rounded-[100px] transition-colors ${on ? "bg-coal" : "bg-subtle border border-line-strong"}`}
     >
       <span
         className={`absolute top-[3px] size-[14px] rounded-full transition-all ${on ? "left-[17px] bg-accent" : "left-[3px] bg-muted-2"}`}

@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "@/components/ui/Icon";
+import { Logo } from "@/components/ui/Logo";
+import { HalloweenDecor } from "@/components/halloween/HalloweenDecor";
 import { workspaceMark } from "@/lib/workspace";
 
 interface AuthSplitProps {
@@ -20,10 +22,10 @@ export default function AuthSplit({ title, description, children, asideCta }: Au
     <main className="grid min-h-dvh bg-canvas lg:grid-cols-[60%_40%]">
       <div className="relative flex flex-col">
         <div className="flex items-center px-[24px] pt-[24px] md:hidden">
-          <Icon name="chink-mark" className="h-[22px] w-auto" />
+          <Logo className="h-[22px] w-auto" />
         </div>
         <div className="hidden px-[32px] pt-[24px] lg:block">
-          <Icon name="chink-mark" className="h-[26px] w-auto" />
+          <Logo className="h-[26px] w-auto" />
         </div>
 
         <div className="flex flex-1 items-center justify-center px-[20px] pb-[48px]">
@@ -35,16 +37,17 @@ export default function AuthSplit({ title, description, children, asideCta }: Au
         </div>
       </div>
 
-      <div className="relative hidden overflow-hidden bg-ink lg:block">
+      <div className="relative hidden overflow-hidden bg-coal lg:block">
+        <HalloweenDecor variant="auth" />
         <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_45%,rgba(205,250,99,0.22),transparent_70%)]" />
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-[20px] p-[48px]">
           <Icon name={workspaceMark(undefined)} size={72} />
-          <p className="max-w-[320px] text-center font-outfit text-[22px] leading-[1.3] font-semibold text-canvas">
+          <p className="max-w-[320px] text-center font-outfit text-[22px] leading-[1.3] font-semibold text-cream">
             Cada referencia, cada unidad. Una única fuente de verdad.
           </p>
           <div className="flex gap-[10px]">
             {[0, 1, 2].map((i) => (
-              <span key={i} className={`h-[6px] rounded-full ${i === 0 ? "w-[24px] bg-accent" : "w-[6px] bg-canvas/30"}`} />
+              <span key={i} className={`h-[6px] rounded-full ${i === 0 ? "w-[24px] bg-accent" : "w-[6px] bg-cream/30"}`} />
             ))}
           </div>
         </div>

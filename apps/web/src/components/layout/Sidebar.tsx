@@ -68,8 +68,8 @@ function WorkspaceMenuItems({ ws, onNavigate, onNewSpace }: { ws: WorkspaceMenuA
   }
   return (
     <>
-      <div className="flex items-center gap-[10px] border-b border-[rgba(51,56,48,0.2)] px-[8px] pt-[4px] pb-[10px]">
-        <span className="flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border border-[rgba(51,56,48,0.2)] bg-canvas">
+      <div className="flex items-center gap-[10px] border-b border-edge px-[8px] pt-[4px] pb-[10px]">
+        <span className="flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border border-edge bg-canvas">
           <Icon name={ws.mark} size={24} />
         </span>
         <span className="flex min-w-0 flex-col">
@@ -121,7 +121,7 @@ function WorkspaceMenuItems({ ws, onNavigate, onNewSpace }: { ws: WorkspaceMenuA
             onNavigate?.();
             onNewSpace();
           }}
-          className="mt-[4px] flex w-full items-center justify-center gap-[6px] rounded-[6px] bg-ink px-[8px] py-[8px] text-[12px] font-semibold text-canvas transition-opacity hover:opacity-90"
+          className="mt-[4px] flex w-full items-center justify-center gap-[6px] rounded-[6px] bg-coal px-[8px] py-[8px] text-[12px] font-semibold text-cream transition-opacity hover:opacity-90"
         >
           <span aria-hidden className="text-[14px] leading-none">+</span> Nuevo espacio
         </button>
@@ -152,7 +152,7 @@ function WorkspaceButton({ layout, onNavigate, onNewSpace }: { layout: "rail" | 
         className={`pressable relative flex h-[52px] w-[64px] shrink-0 items-center justify-center rounded-[10px] transition-colors ${ws.open ? "bg-subtle" : "hover:bg-subtle/60"}`}
       >
           <Icon name={ws.mark} size={38} />
-          <span className="absolute right-[4px] bottom-[4px] flex size-[18px] items-center justify-center rounded-full border border-[rgba(51,56,48,0.25)] bg-canvas shadow-sm">
+          <span className="absolute right-[4px] bottom-[4px] flex size-[18px] items-center justify-center rounded-full border border-edge bg-canvas shadow-sm">
             <Icon name="chevron-down-ink" size={10} />
           </span>
         </button>
@@ -176,7 +176,7 @@ function WorkspaceButton({ layout, onNavigate, onNewSpace }: { layout: "rail" | 
       <PopoverPortal
         anchor={ws.open ? ws.anchor : null}
         align="left"
-        className="flex flex-col rounded-[10px] border border-[rgba(51,56,48,0.2)] bg-canvas p-[8px] shadow-lg"
+        className="flex flex-col rounded-[10px] border border-edge bg-canvas p-[8px] shadow-lg"
       >
         <div ref={ws.panelRef} role="menu" aria-label="Espacio de trabajo" className="anim-pop flex min-h-0 w-[232px] flex-col overflow-y-auto">
           <WorkspaceMenuItems ws={ws} onNavigate={onNavigate} onNewSpace={onNewSpace} />
@@ -273,7 +273,7 @@ export function WorkspaceDrawer({ open, onClose, onNewSpace }: { open: boolean; 
   return (
     <OverlayPortal>
       <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Espacios de trabajo">
-        <button type="button" aria-label="Cerrar" onClick={onClose} className="anim-fade-in absolute inset-0 cursor-default bg-ink/40" />
+        <button type="button" aria-label="Cerrar" onClick={onClose} className="anim-fade-in absolute inset-0 cursor-default bg-black/40" />
         <div className="anim-sheet-up absolute right-0 bottom-0 left-0 max-h-[85vh] overflow-y-auto rounded-t-[20px] bg-canvas px-[20px] pt-[10px] pb-[28px] shadow-xl">
           <div className="mx-auto mb-[10px] h-[4px] w-[40px] rounded-full bg-line" />
           <h2 className="pb-[12px] text-center text-[16px] font-semibold text-ink">Espacios de trabajo</h2>
@@ -288,7 +288,7 @@ export function WorkspaceDrawer({ open, onClose, onNewSpace }: { open: boolean; 
               <span className="block truncate text-[14px] font-semibold text-ink">{ws.spaceName}</span>
               {ws.legalName ? <span className="block truncate text-[11px] text-muted">{ws.legalName}</span> : null}
             </span>
-            <span aria-hidden className="flex size-[22px] items-center justify-center rounded-full bg-ink text-[12px] font-bold text-canvas">
+            <span aria-hidden className="flex size-[22px] items-center justify-center rounded-full bg-coal text-[12px] font-bold text-cream">
               ✓
             </span>
           </button>
@@ -298,7 +298,7 @@ export function WorkspaceDrawer({ open, onClose, onNewSpace }: { open: boolean; 
               onClose();
               onNewSpace?.();
             }}
-            className="mt-[14px] flex w-full items-center justify-center gap-[8px] rounded-[10px] bg-ink px-[12px] py-[13px] text-[14px] font-semibold text-canvas transition-opacity active:opacity-90"
+            className="mt-[14px] flex w-full items-center justify-center gap-[8px] rounded-[10px] bg-coal px-[12px] py-[13px] text-[14px] font-semibold text-cream transition-opacity active:opacity-90"
           >
             <span aria-hidden className="text-[16px] leading-none">+</span> Nuevo espacio
           </button>

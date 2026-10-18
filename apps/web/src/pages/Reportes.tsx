@@ -132,7 +132,7 @@ export default function Reportes() {
             <SectionHeader title="Entradas y salidas" subtitle="9–15 octubre 2026 · Todos los almacenes" action={<span className="text-[11px] font-semibold text-ink">{reports.length ? "12 movimientos" : ""}</span>} />
             {weekly.loading ? <LoadingBlock variant="text" /> : <BarChart data={weekly.data?.data ?? []} max={chartMax} />}
             {s ? (
-              <div className="flex justify-between border-t border-[rgba(51,56,48,0.2)] pt-[12px] text-[11px] leading-[1.4]">
+              <div className="flex justify-between border-t border-edge pt-[12px] text-[11px] leading-[1.4]">
                 <span className="text-muted">
                   Inicio: {formatUnits(s.opening)} + {s.entries} entradas − {s.exits} salidas − {Math.abs(s.adjustments)} ajustes
                 </span>
@@ -195,7 +195,7 @@ export default function Reportes() {
                 key={option || "todos"}
                 type="button"
                 onClick={() => setFormat(option)}
-                className={`rounded-[5px] px-[8px] py-[4px] text-[10px] font-medium ${format === option ? "bg-ink text-canvas" : "bg-subtle text-muted"}`}
+                className={`rounded-[5px] px-[8px] py-[4px] text-[10px] font-medium ${format === option ? "bg-coal text-cream" : "bg-subtle text-muted"}`}
               >
                 {option || "Todos"}
               </button>

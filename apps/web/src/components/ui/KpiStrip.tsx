@@ -52,7 +52,7 @@ export default function KpiStrip({ items, tileLast = false }: KpiStripProps) {
             className={[
               "anim-fade-up anim-delay flex min-w-px flex-1 flex-col",
               isFirst ? "" : "md:pl-[20px]",
-              isLast ? "md:border-r-0" : "md:border-r md:border-[rgba(51,56,48,0.2)]",
+              isLast ? "md:border-r-0" : "md:border-r md:border-edge",
             ].join(" ")}
             style={{ "--anim-delay": delay } as React.CSSProperties}
           >

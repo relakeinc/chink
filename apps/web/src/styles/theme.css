@@ -9,6 +9,8 @@
   --color-subtle: #e8e8e0;
   --color-surface: #eeeee6;
   --color-line: #dfe2d8;
+  /* Borde sutil sobre superficies claras (equivale al rgba anterior). */
+  --color-edge: rgba(51, 56, 48, 0.2);
 
   /* Tinta */
   --color-ink: #242722;
@@ -18,9 +20,16 @@
   --color-muted-2: #a7ae9e;
   --color-shell: #2d332b;
 
+  /* Fijos: no cambian con el tema (fondos oscuros y texto sobre lima). */
+  --color-coal: #242722;
+  --color-cream: #f5f5ef;
+
   /* Acento lima */
   --color-accent: #cdfa63;
   --color-accent-text: #a3c97a;
+
+  /* Salidas del gráfico de barras (naranja solo en Halloween). */
+  --color-exits: #2d332b;
 
   /* Estados */
   --color-success-bg: #1e2d10;
@@ -38,4 +47,58 @@
   --font-dm: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-outfit: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Tema Halloween (temporal, por festividades). Solo re-mapea tokens: el
+ * tema claro queda intacto. Se activa con data-theme="halloween" en <html>.
+ */
+[data-theme="halloween"] {
+  --color-canvas: #16161a;
+  --color-subtle: #0b0b0d;
+  --color-surface: #202026;
+  --color-line: #26282e;
+  --color-edge: rgba(255, 255, 255, 0.12);
+
+  --color-ink: #f2f2ea;
+  --color-ink-strong: #ffffff;
+  --color-muted: #9aa39a;
+  --color-line-strong: #555b55;
+
+  --color-exits: #e8641b;
+  --color-warn-badge-text: #d89a4d;
+  --color-warn-alert: #e0a33d;
+  --color-online: #6fae72;
+}
+
+/* Iconos de un solo tono oscuro: se aclaran solo en Halloween. */
+[data-theme="halloween"] [data-icon="nav-inicio"],
+[data-theme="halloween"] [data-icon="nav-inventario"],
+[data-theme="halloween"] [data-icon="nav-movimientos"],
+[data-theme="halloween"] [data-icon="nav-almacenes"],
+[data-theme="halloween"] [data-icon="nav-reportes"],
+[data-theme="halloween"] [data-icon="nav-equipo"],
+[data-theme="halloween"] [data-icon="nav-config"],
+[data-theme="halloween"] [data-icon="logout"],
+[data-theme="halloween"] [data-icon="chevron-down-ink"],
+[data-theme="halloween"] [data-icon="grid-apps"],
+[data-theme="halloween"] [data-icon="warehouse-box"],
+[data-theme="halloween"] [data-icon="workspace-mark"] {
+  filter: brightness(0) invert(0.93);
+}
+
+/* Enlaces de acción ("Ver reportes →"): naranja solo en Halloween. */
+[data-theme="halloween"] .link-action {
+  color: var(--color-exits);
+}
+
+/* Logo de marca: versión lima en Halloween. */
+.logo-dark {
+  display: none;
+}
+[data-theme="halloween"] .logo-dark {
+  display: inline-flex;
+}
+[data-theme="halloween"] .logo-light {
+  display: none;
 }

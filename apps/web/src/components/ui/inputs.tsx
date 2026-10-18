@@ -61,7 +61,7 @@ export function SearchInput({ value, onChange, placeholder, width = 300, inputRe
 
   return (
     <div
-      className="flex max-w-full shrink-0 items-center gap-[8px] rounded-[6px] border border-[rgba(51,56,48,0.2)] bg-subtle px-[12px]"
+      className="flex max-w-full shrink-0 items-center gap-[8px] rounded-[6px] border border-edge bg-subtle px-[12px]"
       style={fluid ? { height: 36, width: "100%" } : { height: 36, width }}
     >
       <Icon name="search-sm" size={14} />
@@ -141,8 +141,8 @@ export function FilterSelect({
         style={width ? { width } : undefined}
         className={`pressable flex h-[36px] items-center gap-[10px] rounded-[6px] border px-[12px] text-[12px] leading-[1.4] transition-colors ${
           dark
-            ? "border-line-strong bg-ink text-canvas hover:bg-shell"
-            : "border-[rgba(51,56,48,0.2)] bg-subtle text-ink hover:bg-line"
+            ? "border-line-strong bg-coal text-cream hover:bg-shell"
+            : "border-edge bg-subtle text-ink hover:bg-line"
         }`}
       >
         <span className="min-w-0 truncate">{display}</span>
@@ -151,7 +151,7 @@ export function FilterSelect({
         <Icon name={dark ? CHEVRON_DARK : CHEVRON_LIGHT} size={12} className="ml-auto shrink-0" />
       </button>
 
-      <PopoverPortal anchor={anchor} className="flex flex-col overflow-hidden rounded-[8px] border border-[rgba(51,56,48,0.2)] bg-canvas p-[4px] shadow-lg">
+      <PopoverPortal anchor={anchor} className="flex flex-col overflow-hidden rounded-[8px] border border-edge bg-canvas p-[4px] shadow-lg">
         <div ref={panelRef} role="listbox" aria-label={label} className="anim-pop min-h-0 overflow-y-auto">
           {allowClear ? (
             <OptionRow
@@ -240,7 +240,7 @@ export function ColumnMenu({ items, hiddenIds, onToggle, label = "Columnas" }: C
       <PopoverPortal
         anchor={anchor}
         align="right"
-        className="flex flex-col overflow-hidden rounded-[8px] border border-[rgba(51,56,48,0.2)] bg-canvas p-[6px] shadow-lg"
+        className="flex flex-col overflow-hidden rounded-[8px] border border-edge bg-canvas p-[6px] shadow-lg"
       >
         <div ref={panelRef} role="menu" aria-label={label} className="anim-pop flex min-h-0 w-[190px] flex-col gap-[2px] overflow-y-auto">
           {items.map((item) => {
@@ -256,7 +256,7 @@ export function ColumnMenu({ items, hiddenIds, onToggle, label = "Columnas" }: C
               >
                 <span
                   className={`flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border ${
-                    hidden ? "border-[rgba(65,72,58,0.2)] bg-subtle" : "border-accent bg-accent"
+                    hidden ? "border-edge bg-subtle" : "border-accent bg-accent"
                   }`}
                 >
                   {hidden ? null : <Icon name="check" size={10} />}

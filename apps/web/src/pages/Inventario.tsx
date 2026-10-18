@@ -59,7 +59,7 @@ function Checkbox({ checked, onChange }: { checked: boolean; onChange: () => voi
         onChange();
       }}
       className={`flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border ${
-        checked ? "border-accent bg-accent" : "border-[rgba(65,72,58,0.2)] bg-subtle"
+        checked ? "border-accent bg-accent" : "border-edge bg-subtle"
       }`}
     >
       {checked ? <Icon name="check" size={10} /> : null}
@@ -709,7 +709,7 @@ function EditProductImagesModal({
             const marked = remove.has(product.id);
             const preview = override?.preview ?? (!marked ? product.imageUrl : null);
             return (
-              <div key={product.id} className="flex items-center gap-[12px] rounded-[8px] border border-[rgba(51,56,48,0.2)] p-[10px]">
+              <div key={product.id} className="flex items-center gap-[12px] rounded-[8px] border border-edge p-[10px]">
                 {preview ? (
                   <img src={preview} alt={product.name} className="size-[40px] shrink-0 rounded-[6px] bg-subtle object-cover" />
                 ) : (

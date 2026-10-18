@@ -35,11 +35,23 @@ const SECTIONS = [
     description: "Valores predeterminados para nuevos productos y movimientos.",
     fields: ["unit", "defaultWarehouseId", "movementPrefix", "defaultMinStock"] as const,
   },
+  {
+    title: "Apariencia",
+    description: "Tema visual de la aplicación para todo el equipo. Halloween es temporal y no toca tus datos.",
+    fields: ["theme"] as const,
+  },
+];
+
+const THEME_OPTIONS: { id: "auto" | "light" | "halloween"; title: string; description: string }[] = [
+  { id: "auto", title: "Automático", description: "Halloween solo en temporada (15 oct – 5 nov)." },
+  { id: "light", title: "Claro", description: "El Chink de siempre, todo el año." },
+  { id: "halloween", title: "Halloween", description: "Toda la temporada, cuando quieras." },
 ];
 
 const LABELS: Record<string, string> = {
   spaceName: "Nombre del espacio",
   spaceMark: "Icono del espacio",
+  theme: "Tema de la aplicación",
   legalName: "Razón social",
   contactEmail: "Correo de contacto",
   taxId: "Identificación fiscal",
@@ -55,6 +67,7 @@ const LABELS: Record<string, string> = {
 
 const HELPERS: Record<string, string> = {
   spaceMark: "Al crear el espacio se asigna uno al azar. Puedes cambiarlo aquí.",
+  theme: "Automático activa Halloween solo en temporada (15 oct – 5 nov).",
   movementPrefix: "Numeración correlativa automática.",
   defaultMinStock: "Solo para nuevos productos. Los mínimos actuales no cambian.",
 };
@@ -75,7 +88,7 @@ const NOTIFY_RULES: { id: NotifyId; title: string; description: string }[] = [
 ];
 
 const fieldClass =
-  "h-[38px] w-full rounded-[6px] border border-[rgba(51,56,48,0.2)] bg-subtle px-[12px] text-[12px] leading-[1.4] text-ink outline-none focus:border-ink";
+  "h-[38px] w-full rounded-[6px] border border-edge bg-subtle px-[12px] text-[12px] leading-[1.4] text-ink outline-none focus:border-ink";
 
 export default function Configuracion() {
   const [view, setView] = useState("preferencias");
@@ -161,7 +174,7 @@ export default function Configuracion() {
               <section
                 key={section.title}
                 ref={index === 0 ? workspaceRef : undefined}
-                className={`flex scroll-mt-[16px] flex-col gap-[16px] ${index > 0 ? "border-t border-[rgba(51,56,48,0.2)] pt-[20px]" : ""}`}
+                className={`flex scroll-mt-[16px] flex-col gap-[16px] ${index > 0 ? "border-t border-edge pt-[20px]" : ""}`}
               >
                 <div>
                   <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">{section.title}</h2>
@@ -176,9 +189,48 @@ export default function Configuracion() {
                     const value = String(values[field] ?? "");
 
                       return (
-                        <div key={field} className="flex flex-col gap-[7px]">
+                        <div key={field} className={`flex flex-col gap-[7px] ${field === "theme" ? "md:col-span-2" : ""}`}>
                           <span className="text-[11px] font-medium text-ink">{LABELS[field]}</span>
-                          {field === "spaceMark" ? (
+                          {field === "theme" ? (
+                            <span className="grid grid-cols-1 gap-[8px] sm:grid-cols-3" role="group" aria-label="Tema de la aplicación">
+                              {THEME_OPTIONS.map((option) => {
+                                const active = String(values.theme ?? "auto") === option.id;
+                                return (
+                                  <button
+                                    key={option.id}
+                                    type="button"
+                                    aria-pressed={active}
+                                    onClick={() => setValues((prev) => ({ ...prev, theme: option.id }))}
+                                    className={`pressable flex items-center gap-[10px] rounded-[8px] border bg-canvas p-[10px] text-left transition-transform hover:scale-[1.01] ${
+                                      active ? "border-ink ring-2 ring-ink/30" : "border-edge"
+                                    }`}
+                                  >
+                                    <span
+                                      aria-hidden
+                                      className="flex h-[32px] w-[44px] shrink-0 items-center justify-center rounded-[6px] border border-edge"
+                                      style={{
+                                        background:
+                                          option.id === "light"
+                                            ? "#F5F5EF"
+                                            : option.id === "halloween"
+                                              ? "#16161A"
+                                              : "linear-gradient(135deg, #F5F5EF 50%, #16161A 50%)",
+                                      }}
+                                    >
+                                      <span
+                                        className="size-[10px] rounded-full"
+                                        style={{ background: option.id === "halloween" ? "#E8641B" : option.id === "light" ? "#242722" : "#CDFA63" }}
+                                      />
+                                    </span>
+                                    <span className="flex min-w-0 flex-col">
+                                      <span className="text-[12px] font-semibold text-ink">{option.title}</span>
+                                      <span className="text-[10px] leading-[1.4] text-muted">{option.description}</span>
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </span>
+                          ) : field === "spaceMark" ? (
                             <span className="flex flex-wrap gap-[8px]" role="group" aria-label="Icono del espacio">
                               {WORKSPACE_MARKS.map((mark) => {
                                 const active = workspaceMark(String(values.spaceMark ?? "")) === mark.id;
@@ -191,7 +243,7 @@ export default function Configuracion() {
                                     title={mark.id}
                                     onClick={() => setValues((prev) => ({ ...prev, spaceMark: mark.id, spaceColor: mark.color }))}
                                     className={`flex size-[44px] shrink-0 items-center justify-center rounded-[8px] border bg-canvas transition-transform hover:scale-105 ${
-                                      active ? "border-ink ring-2 ring-ink/30" : "border-[rgba(51,56,48,0.2)]"
+                                      active ? "border-ink ring-2 ring-ink/30" : "border-edge"
                                     }`}
                                   >
                                     <Icon name={mark.id} size={30} />
@@ -229,7 +281,7 @@ export default function Configuracion() {
             <div className="flex flex-col gap-[8px] rounded-[8px] bg-surface p-[20px]">
               <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">Control del inventario</h2>
               {CONTROL_RULES.map((rule, index) => (
-                <div key={String(rule.id)} className={`flex items-center gap-[20px] py-[12px] ${index < CONTROL_RULES.length - 1 ? "border-b border-[rgba(51,56,48,0.2)]" : ""}`}>
+                <div key={String(rule.id)} className={`flex items-center gap-[20px] py-[12px] ${index < CONTROL_RULES.length - 1 ? "border-b border-edge" : ""}`}>
                   <span className="flex min-w-px flex-1 flex-col gap-[4px]">
                     <span className="text-[12px] font-medium text-ink">{rule.title}</span>
                     <span className="text-[11px] leading-[1.4] text-muted">{rule.description}</span>
@@ -243,7 +295,7 @@ export default function Configuracion() {
               ))}
             </div>
 
-            <div className="flex flex-col gap-[14px] rounded-[8px] border border-[rgba(51,56,48,0.2)] p-[20px]">
+            <div className="flex flex-col gap-[14px] rounded-[8px] border border-edge p-[20px]">
               <h2 className="flex items-center gap-[8px] text-[13px] font-semibold text-ink">
                 <Icon name="info" size={16} />
                 Cómo se calcula tu stock
@@ -251,7 +303,7 @@ export default function Configuracion() {
               <p className="text-[12px] leading-[1.4] text-muted">
                 Stock total = disponible + reservado. Las transferencias cambian la ubicación, no el total del inventario.
               </p>
-              <span className="h-px w-full bg-[rgba(51,56,48,0.2)]" />
+              <span className="h-px w-full bg-edge" />
               <div className="flex items-baseline justify-between text-[12px]">
                 <span className="text-ink">
                   {formatUnits(summary.available)} + {formatUnits(summary.reserved)}
@@ -343,7 +395,7 @@ function NotificationsPanel({
         <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">Avisos del espacio</h2>
         <p className="text-[11px] leading-[1.4] text-muted">Elige qué avisos recibe el equipo. Se aplican al pulsar «Guardar cambios». Los del navegador necesitan tu permiso.</p>
         {NOTIFY_RULES.map((rule, index) => (
-          <div key={rule.id} className={`flex items-center gap-[20px] py-[12px] ${index < NOTIFY_RULES.length - 1 ? "border-b border-[rgba(51,56,48,0.2)]" : ""}`}>
+          <div key={rule.id} className={`flex items-center gap-[20px] py-[12px] ${index < NOTIFY_RULES.length - 1 ? "border-b border-edge" : ""}`}>
             <span className="min-w-px flex-1 flex-col gap-[4px]">
               <span className="text-[12px] font-medium text-ink">{rule.title}</span>
               <span className="text-[11px] leading-[1.4] text-muted">{rule.description}</span>
@@ -433,7 +485,7 @@ function SecurityPanel() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-[14px] rounded-[8px] border border-[rgba(51,56,48,0.2)] p-[20px]">
+      <div className="flex flex-col gap-[14px] rounded-[8px] border border-edge p-[20px]">
         <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">Tu sesión</h2>
         <div className="flex items-center gap-[10px]">
           <span className="flex size-[38px] items-center justify-center rounded-full bg-surface text-[11px] font-semibold text-ink">

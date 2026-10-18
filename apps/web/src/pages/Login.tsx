@@ -17,7 +17,7 @@ const DEMO_PASSWORD = "chink2026";
 const SHOW_DEMO = import.meta.env.DEV;
 
 const fieldClass =
-  "h-[38px] rounded-[6px] border border-[rgba(51,56,48,0.2)] bg-canvas px-[12px] text-[12px] text-ink outline-none focus:border-ink";
+  "h-[38px] rounded-[6px] border border-edge bg-canvas px-[12px] text-[12px] text-ink outline-none focus:border-ink";
 
 export default function Login() {
   const { user, login, error } = useAuth();

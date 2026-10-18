@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/lib/theme";
 import AppLayout from "@/components/layout/AppLayout";
 import RequireAuth from "@/components/layout/RequireAuth";
 import Login from "@/pages/Login";
@@ -48,10 +49,12 @@ const router = createBrowserRouter([
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
-      <ErrorBoundary>
-        <RouterProvider router={router} />
-        <ToastHost />
-      </ErrorBoundary>
+      <ThemeProvider>
+        <ErrorBoundary>
+          <RouterProvider router={router} />
+          <ToastHost />
+        </ErrorBoundary>
+      </ThemeProvider>
     </AuthProvider>
   </StrictMode>,
 );

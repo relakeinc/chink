@@ -93,7 +93,7 @@ export function Skeleton({ variant = "card", className = "" }: { variant?: Skele
           <div className="skeleton h-[36px] w-[120px] rounded-[6px]" />
         </div>
         {[0, 1, 2, 3, 4, 5].map((row) => (
-          <div key={row} className="flex items-center gap-[16px] border-b border-[rgba(51,56,48,0.2)] py-[16px]">
+          <div key={row} className="flex items-center gap-[16px] border-b border-edge py-[16px]">
             <div className="skeleton size-[34px] rounded-[6px]" />
             <div className="skeleton h-[12px] flex-1 rounded-[3px]" />
             <div className="skeleton h-[12px] w-[90px] rounded-[3px]" />

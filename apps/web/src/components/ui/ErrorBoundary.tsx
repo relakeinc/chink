@@ -32,7 +32,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     if (this.state.error) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-canvas p-[24px] font-dm">
-          <div className="w-full max-w-[460px] rounded-[10px] border border-[rgba(51,56,48,0.2)] bg-subtle p-[24px] text-ink">
+          <div className="w-full max-w-[460px] rounded-[10px] border border-edge bg-subtle p-[24px] text-ink">
             <h1 className="font-outfit text-[18px] font-semibold">Algo no se pudo mostrar</h1>
             <p className="mt-[8px] text-[12px] leading-[1.5] text-muted">
               Se produjo un error al dibujar esta pantalla. Puedes reintentar sin perder la sesión.
@@ -41,14 +41,14 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="rounded-[6px] border border-[rgba(51,56,48,0.2)] bg-canvas px-[12px] py-[8px] text-[12px] font-semibold transition-colors hover:bg-line"
+                className="rounded-[6px] border border-edge bg-canvas px-[12px] py-[8px] text-[12px] font-semibold transition-colors hover:bg-line"
               >
                 Recargar
               </button>
               <button
                 type="button"
                 onClick={this.handleRetry}
-                className="rounded-[6px] bg-ink px-[12px] py-[8px] text-[12px] font-semibold text-canvas transition-opacity hover:opacity-90"
+                className="rounded-[6px] bg-coal px-[12px] py-[8px] text-[12px] font-semibold text-cream transition-opacity hover:opacity-90"
               >
                 Reintentar
               </button>

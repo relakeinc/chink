@@ -156,7 +156,8 @@ Rutas: `/login`, `/activar`, `/inicio`, `/inventario`, `/movimientos`,
 permiso (`consult`, `register`, `adjust`, `report`, `admin`).
 
 - Pestañas de Configuración: Preferencias (incluye Espacio de trabajo con
-  galería de iconos), Notificaciones, Seguridad (cambio de contraseña).
+  galería de iconos, y Apariencia con el tema: Automático/Claro/Halloween),
+  Notificaciones, Seguridad (cambio de contraseña).
 - Componentes propios en `components/ui`: `FilterSelect`, `DateRangePicker`,
   `ColumnMenu`, `DataTable`, `Modal`, `Tabs`, `Popover` (por portal: los
   desplegables flotan sobre tarjetas, modales y scroll; capas en

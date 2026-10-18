@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import MobileNav from "./MobileNav";
 import MobileSearchBar from "./MobileSearchBar";
+import { HalloweenDecor } from "@/components/halloween/HalloweenDecor";
 
 /**
  * Shell de la aplicación.
@@ -19,6 +20,7 @@ export default function AppLayout() {
       <TopBar />
       <MobileSearchBar />
       <MobileNav />
+      <HalloweenDecor variant="app" />
 
       <main className="mr-0 mt-[100px] ml-0 h-[calc(100vh-100px)] overflow-hidden overscroll-none md:mr-[25px] md:mt-[55px] md:ml-[104px] md:h-[calc(100vh-55px)]">
         <div className="flex h-full flex-col overflow-hidden rounded-tl-[10px] rounded-tr-[10px] bg-subtle">

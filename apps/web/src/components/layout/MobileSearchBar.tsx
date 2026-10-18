@@ -19,7 +19,7 @@ export default function MobileSearchBar() {
           type="button"
           aria-label="Rango de fechas"
           onClick={() => window.dispatchEvent(new Event("chink:open-range"))}
-          className="pressable flex size-[36px] shrink-0 items-center justify-center rounded-[6px] border border-line-strong bg-ink text-canvas transition-colors active:bg-shell"
+          className="pressable flex size-[36px] shrink-0 items-center justify-center rounded-[6px] border border-line-strong bg-coal text-cream transition-colors active:bg-shell"
         >
           <Icon name="calendar-days" size={15} />
         </button>

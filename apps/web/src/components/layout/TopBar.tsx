@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Icon } from "@/components/ui/Icon";
+import { Logo } from "@/components/ui/Logo";
 import { api } from "@/lib/api";
 import { useAsync } from "@/lib/useAsync";
 import { onWorkspaceUpdated, workspaceMark } from "@/lib/workspace";
@@ -52,7 +53,7 @@ export default function TopBar() {
   return (
     <header className="fixed top-[16px] right-[12px] left-[12px] z-30 flex h-[30px] items-center gap-[14px] md:right-[25px] md:left-[16px] md:gap-[22px]">
       <span className="hidden h-[28px] shrink-0 items-center md:flex" aria-label="Chink">
-        <Icon name="chink-mark" className="h-[28px] w-auto" />
+        <Logo className="h-[28px] w-auto" />
       </span>
 
       {/* Conmutador del espacio: solo móvil, abre cajón con lo mismo que en desktop. */}
@@ -106,10 +107,10 @@ export default function TopBar() {
         <PopoverPortal
           anchor={accountOpen ? anchor : null}
           align="right"
-          className="hidden flex-col rounded-[8px] border border-[rgba(51,56,48,0.2)] bg-canvas p-[8px] shadow-lg md:flex"
+          className="hidden flex-col rounded-[8px] border border-edge bg-canvas p-[8px] shadow-lg md:flex"
         >
           <div ref={panelRef} role="menu" aria-label="Cuenta" className="anim-pop flex min-h-0 w-[200px] flex-col overflow-y-auto">
-            <div className="border-b border-[rgba(51,56,48,0.2)] px-[8px] pt-[4px] pb-[10px]">
+            <div className="border-b border-edge px-[8px] pt-[4px] pb-[10px]">
               <p className="text-[12px] font-medium text-ink">{user?.name}</p>
               <p className="text-[10px] text-muted">{user?.email}</p>
               <p className="mt-[4px] text-[10px] text-muted">Rol: {user?.role}</p>
@@ -158,7 +159,7 @@ export default function TopBar() {
         {sheetOpen ? (
           <OverlayPortal>
             <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Cuenta">
-              <button type="button" aria-label="Cerrar" onClick={() => setSheetOpen(false)} className="anim-fade-in absolute inset-0 cursor-default bg-ink/40" />
+              <button type="button" aria-label="Cerrar" onClick={() => setSheetOpen(false)} className="anim-fade-in absolute inset-0 cursor-default bg-black/40" />
               <div className="anim-sheet-up absolute right-0 bottom-0 left-0 rounded-t-[20px] bg-canvas px-[20px] pt-[10px] pb-[28px] shadow-xl">
               <div className="mx-auto mb-[14px] h-[4px] w-[40px] rounded-full bg-line" />
               <div className="flex flex-col items-center gap-[6px] pb-[14px]">
@@ -169,7 +170,7 @@ export default function TopBar() {
                 <span className="text-[12px] text-muted">{user?.email ?? ""}</span>
                 <span className="text-[11px] text-muted">Rol: {user?.role ?? ""}</span>
               </div>
-              <div className="flex flex-col border-t border-[rgba(51,56,48,0.2)] pt-[8px]">
+              <div className="flex flex-col border-t border-edge pt-[8px]">
                 <button
                   type="button"
                   onClick={() => go("/configuracion?seccion=espacio")}

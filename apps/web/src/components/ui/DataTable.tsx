@@ -39,7 +39,7 @@ export default function DataTable<T>({
     <div className="w-full overflow-x-auto">
       <div className="min-w-max w-full">
         <div
-          className="anim-fade-up flex items-center border-t border-b border-[rgba(51,56,48,0.2)] px-[20px]"
+          className="anim-fade-up flex items-center border-t border-b border-edge px-[20px]"
           style={{ height: 40, gap }}
         >
           {columns.map((column) => (
@@ -58,7 +58,7 @@ export default function DataTable<T>({
           <div
             key={rowKey(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
-            className={`anim-fade-up anim-delay flex items-center border-b border-[rgba(51,56,48,0.2)] px-[20px] transition-colors duration-150 ${
+            className={`anim-fade-up anim-delay flex items-center border-b border-edge px-[20px] transition-colors duration-150 ${
               // La fila seleccionada es verde oscuro: el hover debe oscurecerla,
               // no aclararla con crema translúcida, para no romper el contraste.
               isSelected?.(row) ? "bg-row-selected border-[rgba(45,74,26,0.2)] hover:bg-[#151f0d]" : "hover:bg-subtle/40"
