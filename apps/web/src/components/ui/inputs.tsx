@@ -139,7 +139,7 @@ export function FilterSelect({
         aria-label={label}
         onClick={() => setOpen((prev) => !prev)}
         style={width ? { width } : undefined}
-        className={`flex h-[36px] items-center gap-[10px] rounded-[6px] border px-[12px] text-[12px] leading-[1.4] transition-colors ${
+        className={`pressable flex h-[36px] items-center gap-[10px] rounded-[6px] border px-[12px] text-[12px] leading-[1.4] transition-colors ${
           dark
             ? "border-line-strong bg-ink text-canvas hover:bg-shell"
             : "border-[rgba(51,56,48,0.2)] bg-subtle text-ink hover:bg-line"
@@ -188,8 +188,8 @@ function OptionRow({ active, label, onClick }: { active: boolean; label: string;
       role="option"
       aria-selected={active}
       onClick={onClick}
-      className={`flex w-full items-center justify-between gap-[10px] rounded-[5px] px-[8px] py-[6px] text-left text-[12px] leading-[1.4] transition-colors ${
-        active ? "bg-subtle text-ink" : "text-ink hover:bg-subtle"
+      className={`pressable flex w-full items-center justify-between gap-[10px] rounded-[5px] px-[8px] py-[6px] text-left text-[12px] leading-[1.4] transition-colors ${
+        active ? "bg-subtle text-ink" : "text-ink hover:bg-subtle active:bg-subtle"
       }`}
     >
       <span className="truncate">{label}</span>
@@ -252,7 +252,7 @@ export function ColumnMenu({ items, hiddenIds, onToggle, label = "Columnas" }: C
                 role="menuitemcheckbox"
                 aria-checked={!hidden}
                 onClick={() => onToggle(item.id)}
-                className="flex items-center gap-[8px] rounded-[5px] px-[8px] py-[6px] text-left text-[12px] leading-[1.4] text-ink transition-colors hover:bg-subtle"
+                className="pressable flex items-center gap-[8px] rounded-[5px] px-[8px] py-[6px] text-left text-[12px] leading-[1.4] text-ink transition-colors hover:bg-subtle active:bg-subtle"
               >
                 <span
                   className={`flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border ${
@@ -286,7 +286,7 @@ export function Pagination({ page, totalPages, onChange }: PaginationProps) {
         type="button"
         disabled={page <= 1}
         onClick={() => onChange(page - 1)}
-        className="text-[11px] leading-[1.4] text-line-strong disabled:opacity-40"
+        className="pressable text-[11px] leading-[1.4] text-line-strong transition-colors hover:text-ink disabled:opacity-40"
       >
         Anterior
       </button>
@@ -297,7 +297,7 @@ export function Pagination({ page, totalPages, onChange }: PaginationProps) {
         type="button"
         disabled={page >= totalPages}
         onClick={() => onChange(page + 1)}
-        className="text-[11px] leading-[1.4] text-line-strong disabled:opacity-40"
+        className="pressable text-[11px] leading-[1.4] text-line-strong transition-colors hover:text-ink disabled:opacity-40"
       >
         Siguiente
       </button>

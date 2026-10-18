@@ -94,7 +94,7 @@ export default function MovementModal({ open, onClose, initialType = "ENTRY", in
 
     setSaving(true);
     try {
-      await api.createMovement({
+      const created = await api.createMovement({
         type,
         productId,
         quantity: Math.round(amount),
@@ -104,6 +104,8 @@ export default function MovementModal({ open, onClose, initialType = "ENTRY", in
         note: note.trim() || undefined,
       });
       showNotice(`${TYPES.find((t) => t.value === type)?.label ?? "Movimiento"} registrado.`);
+      // Aviso nativo si el movimiento cruzó un mínimo y los avisos están activos.
+      void notifyLowStock(created.crossedLowStock);
       await onDone();
       reset();
       onClose();
@@ -111,6 +113,21 @@ export default function MovementModal({ open, onClose, initialType = "ENTRY", in
       setError(cause instanceof Error ? cause.message : "No se pudo registrar el movimiento");
     } finally {
       setSaving(false);
+    }
+  }
+
+  /** Aviso nativo del navegador si hay permiso y los avisos están activos. */
+  async function notifyLowStock(crossed: { product: string; sku: string; stock: number; minStock: number } | null) {
+    if (!crossed || !("Notification" in window) || Notification.permission !== "granted") return;
+    try {
+      const prefs = await api.getSettings();
+      if (!prefs.data.notifyLowStock) return;
+      new Notification(`Stock bajo: ${crossed.product}`, {
+        body: `${crossed.sku} quedó en ${crossed.stock} u. (mínimo ${crossed.minStock} u.)`,
+        icon: "/icons/icon-192.png",
+      });
+    } catch {
+      /* los avisos son accesorios: nunca rompen el flujo */
     }
   }
 

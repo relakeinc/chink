@@ -303,20 +303,59 @@ function NotificationsPanel({
   dirty: boolean;
   onToggle: (id: NotifyId, next: boolean) => void;
 }) {
+  const { showNotice } = useNotice();
+
+  async function toggle(id: NotifyId, next: boolean) {
+    onToggle(id, next);
+    // Al activar un aviso se pide el permiso del navegador una sola vez.
+    if (next && typeof Notification !== "undefined" && Notification.permission === "default") {
+      try {
+        await Notification.requestPermission();
+      } catch {
+        /* si el navegador lo bloquea, el usuario lo activa en ajustes */
+      }
+    }
+  }
+
+  async function testNotification() {
+    if (typeof Notification === "undefined") {
+      showNotice("Este navegador no admite notificaciones.", { variant: "warning", icon: "warning" });
+      return;
+    }
+    if (Notification.permission === "denied") {
+      showNotice("Las notificaciones están bloqueadas: actívalas en los ajustes del navegador.", { variant: "warning", icon: "warning" });
+      return;
+    }
+    if (Notification.permission === "default") {
+      const result = await Notification.requestPermission().catch(() => "denied" as NotificationPermission);
+      if (result !== "granted") {
+        showNotice("Sin permiso no podemos avisarte.", { variant: "info", icon: "info" });
+        return;
+      }
+    }
+    new Notification("Chink · aviso de prueba", { body: "Si ves esto, los avisos del navegador funcionan.", icon: "/icons/icon-192.png" });
+    showNotice("Aviso de prueba enviado.");
+  }
+
   return (
     <div className="flex max-w-[760px] flex-col gap-[16px]">
       <div className="flex flex-col gap-[8px] rounded-[8px] bg-surface p-[20px]">
         <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">Avisos del espacio</h2>
-        <p className="text-[11px] leading-[1.4] text-muted">Elige qué avisos recibe el equipo. Se aplican al pulsar «Guardar cambios».</p>
+        <p className="text-[11px] leading-[1.4] text-muted">Elige qué avisos recibe el equipo. Se aplican al pulsar «Guardar cambios». Los del navegador necesitan tu permiso.</p>
         {NOTIFY_RULES.map((rule, index) => (
           <div key={rule.id} className={`flex items-center gap-[20px] py-[12px] ${index < NOTIFY_RULES.length - 1 ? "border-b border-[rgba(51,56,48,0.2)]" : ""}`}>
-            <span className="flex min-w-px flex-1 flex-col gap-[4px]">
+            <span className="min-w-px flex-1 flex-col gap-[4px]">
               <span className="text-[12px] font-medium text-ink">{rule.title}</span>
               <span className="text-[11px] leading-[1.4] text-muted">{rule.description}</span>
             </span>
-            <Toggle on={Boolean(values[rule.id])} onChange={(next) => onToggle(rule.id, next)} label={rule.title} />
+            <Toggle on={Boolean(values[rule.id])} onChange={(next) => void toggle(rule.id, next)} label={rule.title} />
           </div>
         ))}
+        <div className="flex justify-end pt-[4px]">
+          <Button variant="filter" height={36} onClick={() => void testNotification()}>
+            Probar notificación
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-[10px] rounded-[8px] bg-success-bg p-[16px]">

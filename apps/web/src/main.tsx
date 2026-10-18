@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 import RequireAuth from "@/components/layout/RequireAuth";
 import Login from "@/pages/Login";
+import Registro from "@/pages/Registro";
 import Activar from "@/pages/Activar";
 import Inicio from "@/pages/Inicio";
 import Inventario from "@/pages/Inventario";
@@ -20,6 +21,7 @@ import "@/styles/index.css";
 
 const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
+  { path: "/registro", element: <Registro /> },
   {
     element: <RequireAuth />,
     children: [

@@ -16,19 +16,19 @@ export default function Modal({ open, title, description, onClose, children, foo
   return (
     <div style={{ zIndex: LAYERS.modal }} className="fixed inset-0 flex items-center justify-center bg-ink/40 p-[20px]">
       {/* El fondo usa opacidad pura para poder transicionar sin `backdrop-filter`. */}
-      <button type="button" aria-label="Cerrar" onClick={onClose} className="anim-pop absolute inset-0 cursor-default" />
+      <button type="button" aria-label="Cerrar" onClick={onClose} className="anim-fade-in absolute inset-0 cursor-default" />
       <div className="anim-pop relative w-full max-w-[520px] rounded-[10px] bg-canvas p-[20px] shadow-xl">
         <div className="flex items-start justify-between gap-[12px]">
           <div>
             <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">{title}</h2>
             {description ? <p className="mt-[4px] text-[11px] text-muted">{description}</p> : null}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="-mr-[4px] -mt-[4px] rounded-[4px] px-[4px] text-[18px] leading-none text-muted transition-colors hover:bg-subtle hover:text-ink"
-          >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Cerrar"
+        className="pressable -mr-[4px] -mt-[4px] rounded-[4px] px-[4px] text-[18px] leading-none text-muted transition-colors hover:bg-subtle hover:text-ink"
+      >
             ×
           </button>
         </div>

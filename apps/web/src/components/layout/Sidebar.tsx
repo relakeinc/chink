@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useAsync } from "@/lib/useAsync";
 import { PopoverPortal, useDismissOnOutside, usePopoverAnchor, OverlayPortal } from "@/components/ui/Popover";
 import { onWorkspaceUpdated, workspaceMark } from "@/lib/workspace";
+import WorkspaceOnboarding from "@/components/forms/WorkspaceOnboarding";
 
 interface NavItem {
   to: string;
@@ -60,7 +61,7 @@ function useWorkspaceMenu() {
 type WorkspaceMenuApi = ReturnType<typeof useWorkspaceMenu>;
 
 /** Contenido del menú del espacio (cabecera + acciones). */
-function WorkspaceMenuItems({ ws, onNavigate }: { ws: WorkspaceMenuApi; onNavigate?: () => void }) {
+function WorkspaceMenuItems({ ws, onNavigate, onNewSpace }: { ws: WorkspaceMenuApi; onNavigate?: () => void; onNewSpace?: () => void }) {
   function go(path: string) {
     ws.go(path);
     onNavigate?.();
@@ -112,7 +113,21 @@ function WorkspaceMenuItems({ ws, onNavigate }: { ws: WorkspaceMenuApi; onNaviga
         Cerrar sesión
       </button>
 
-      <p className="px-[8px] pt-[8px] text-[10px] leading-[1.4] text-muted">Un solo espacio en esta cuenta.</p>
+      {onNewSpace ? (
+        <button
+          type="button"
+          onClick={() => {
+            ws.close();
+            onNavigate?.();
+            onNewSpace();
+          }}
+          className="mt-[4px] flex w-full items-center justify-center gap-[6px] rounded-[6px] bg-ink px-[8px] py-[8px] text-[12px] font-semibold text-canvas transition-opacity hover:opacity-90"
+        >
+          <span aria-hidden className="text-[14px] leading-none">+</span> Nuevo espacio
+        </button>
+      ) : (
+        <p className="px-[8px] pt-[8px] text-[10px] leading-[1.4] text-muted">Un solo espacio en esta cuenta.</p>
+      )}
     </>
   );
 }
@@ -121,7 +136,7 @@ function WorkspaceMenuItems({ ws, onNavigate }: { ws: WorkspaceMenuApi; onNaviga
  * Conmutador de espacio: en el rail es el logo con badge; en el cajón móvil,
  * una fila con logo, nombre y chevron.
  */
-function WorkspaceButton({ layout, onNavigate }: { layout: "rail" | "row"; onNavigate?: () => void }) {
+function WorkspaceButton({ layout, onNavigate, onNewSpace }: { layout: "rail" | "row"; onNavigate?: () => void; onNewSpace?: () => void }) {
   const ws = useWorkspaceMenu();
 
   return (
@@ -133,9 +148,9 @@ function WorkspaceButton({ layout, onNavigate }: { layout: "rail" | "row"; onNav
           aria-expanded={ws.open}
           aria-label={`Espacio de trabajo: ${ws.spaceName}`}
           title={ws.spaceName}
-          onClick={() => ws.setOpen((prev) => !prev)}
-          className={`relative flex h-[52px] w-[64px] shrink-0 items-center justify-center rounded-[10px] transition-colors ${ws.open ? "bg-subtle" : "hover:bg-subtle/60"}`}
-        >
+      onClick={() => ws.setOpen((prev) => !prev)}
+        className={`pressable relative flex h-[52px] w-[64px] shrink-0 items-center justify-center rounded-[10px] transition-colors ${ws.open ? "bg-subtle" : "hover:bg-subtle/60"}`}
+      >
           <Icon name={ws.mark} size={38} />
           <span className="absolute right-[4px] bottom-[4px] flex size-[18px] items-center justify-center rounded-full border border-[rgba(51,56,48,0.25)] bg-canvas shadow-sm">
             <Icon name="chevron-down-ink" size={10} />
@@ -164,7 +179,7 @@ function WorkspaceButton({ layout, onNavigate }: { layout: "rail" | "row"; onNav
         className="flex flex-col rounded-[10px] border border-[rgba(51,56,48,0.2)] bg-canvas p-[8px] shadow-lg"
       >
         <div ref={ws.panelRef} role="menu" aria-label="Espacio de trabajo" className="anim-pop flex min-h-0 w-[232px] flex-col overflow-y-auto">
-          <WorkspaceMenuItems ws={ws} onNavigate={onNavigate} />
+          <WorkspaceMenuItems ws={ws} onNavigate={onNavigate} onNewSpace={onNewSpace} />
         </div>
       </PopoverPortal>
     </span>
@@ -174,33 +189,37 @@ function WorkspaceButton({ layout, onNavigate }: { layout: "rail" | "row"; onNav
 /**
  * Rail lateral compacto estilo ClickUp: avatar del espacio con desplegable
  * funcional, iconos de 24 px con rótulo y Administración anclada abajo.
- * Solo en escritorio; en móvil hay cajón (SidebarDrawer).
+ * Solo en escritorio; en móvil hay hoja inferior y dock.
  */
 export default function Sidebar() {
   const { can } = useAuth();
   const visibleMain = MAIN_NAV.filter((item) => !item.permission || can(item.permission));
   const visibleAdmin = ADMIN_NAV.filter((item) => !item.permission || can(item.permission));
+  const [onboarding, setOnboarding] = useState(false);
 
   return (
-    <aside className="fixed left-[16px] top-[55px] hidden h-[calc(100vh-55px)] w-[64px] flex-col items-start gap-[16px] pb-[14px] md:flex">
-      <WorkspaceButton layout="rail" />
+    <>
+      <aside className="fixed left-[16px] top-[55px] hidden h-[calc(100vh-55px)] w-[64px] flex-col items-start gap-[16px] pb-[14px] md:flex">
+        <WorkspaceButton layout="rail" onNavigate={undefined} onNewSpace={() => setOnboarding(true)} />
 
-      <nav className="flex w-[64px] shrink-0 flex-col items-start gap-[8px] overflow-hidden">
-        {visibleMain.map((item) => (
-          <SidebarLink key={item.to} item={item} />
-        ))}
-      </nav>
-
-      <div className="min-h-[12px] w-[64px] flex-1" />
-
-      {visibleAdmin.length > 0 ? (
         <nav className="flex w-[64px] shrink-0 flex-col items-start gap-[8px] overflow-hidden">
-          {visibleAdmin.map((item) => (
+          {visibleMain.map((item) => (
             <SidebarLink key={item.to} item={item} />
           ))}
         </nav>
-      ) : null}
-    </aside>
+
+        <div className="min-h-[12px] w-[64px] flex-1" />
+
+        {visibleAdmin.length > 0 ? (
+          <nav className="flex w-[64px] shrink-0 flex-col items-start gap-[8px] overflow-hidden">
+            {visibleAdmin.map((item) => (
+              <SidebarLink key={item.to} item={item} />
+            ))}
+          </nav>
+        ) : null}
+      </aside>
+      <WorkspaceOnboarding open={onboarding} onClose={() => setOnboarding(false)} />
+    </>
   );
 }
 
@@ -210,7 +229,7 @@ function SidebarLink({ item }: { item: NavItem }) {
       to={item.to}
       className={({ isActive }) =>
         [
-          "flex h-[52px] w-[64px] shrink-0 flex-col items-center justify-center overflow-hidden rounded-[10px] transition-colors",
+          "pressable flex h-[52px] w-[64px] shrink-0 flex-col items-center justify-center overflow-hidden rounded-[10px] transition-colors",
           // La barra es crema: no hay fondo oscuro en Administración.
           // Solo el activo lleva la píldora `subtle`.
           isActive ? "bg-subtle" : "hover:bg-subtle/60",
@@ -237,7 +256,7 @@ function SidebarLink({ item }: { item: NavItem }) {
  * Hoja inferior del espacio en móvil: se abre desde el conmutador del TopBar
  * y ofrece lo mismo que el menú de escritorio, subiendo desde abajo.
  */
-export function WorkspaceDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function WorkspaceDrawer({ open, onClose, onNewSpace }: { open: boolean; onClose: () => void; onNewSpace?: () => void }) {
   const ws = useWorkspaceMenu();
 
   useEffect(() => {
@@ -254,7 +273,7 @@ export function WorkspaceDrawer({ open, onClose }: { open: boolean; onClose: () 
   return (
     <OverlayPortal>
       <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Espacios de trabajo">
-        <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 cursor-default bg-ink/40" />
+        <button type="button" aria-label="Cerrar" onClick={onClose} className="anim-fade-in absolute inset-0 cursor-default bg-ink/40" />
         <div className="anim-sheet-up absolute right-0 bottom-0 left-0 max-h-[85vh] overflow-y-auto rounded-t-[20px] bg-canvas px-[20px] pt-[10px] pb-[28px] shadow-xl">
           <div className="mx-auto mb-[10px] h-[4px] w-[40px] rounded-full bg-line" />
           <h2 className="pb-[12px] text-center text-[16px] font-semibold text-ink">Espacios de trabajo</h2>
@@ -262,7 +281,7 @@ export function WorkspaceDrawer({ open, onClose }: { open: boolean; onClose: () 
             type="button"
             aria-current="true"
             onClick={onClose}
-            className="flex w-full items-center gap-[12px] rounded-[12px] bg-subtle px-[12px] py-[12px] text-left"
+            className="pressable flex w-full items-center gap-[12px] rounded-[12px] bg-subtle px-[12px] py-[12px] text-left"
           >
             <Icon name={ws.mark} size={32} />
             <span className="min-w-0 flex-1">
@@ -277,7 +296,7 @@ export function WorkspaceDrawer({ open, onClose }: { open: boolean; onClose: () 
             type="button"
             onClick={() => {
               onClose();
-              ws.go("/configuracion?seccion=espacio");
+              onNewSpace?.();
             }}
             className="mt-[14px] flex w-full items-center justify-center gap-[8px] rounded-[10px] bg-ink px-[12px] py-[13px] text-[14px] font-semibold text-canvas transition-opacity active:opacity-90"
           >

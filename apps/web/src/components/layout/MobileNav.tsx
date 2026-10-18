@@ -51,7 +51,7 @@ export default function MobileNav() {
             to={item.to}
             aria-label={item.label}
             className={({ isActive }) =>
-              `flex w-[56px] flex-col items-center gap-[2px] rounded-[14px] py-[6px] transition-colors ${isActive ? "bg-subtle" : ""}`
+              `pressable flex w-[56px] flex-col items-center gap-[2px] rounded-[14px] py-[6px] transition-colors ${isActive ? "bg-subtle" : ""}`
             }
           >
             {({ isActive }) => (
@@ -70,7 +70,7 @@ export default function MobileNav() {
           aria-haspopup="dialog"
           aria-expanded={allOpen}
           onClick={() => setAllOpen(true)}
-          className={`flex w-[56px] flex-col items-center gap-[2px] rounded-[14px] py-[6px] transition-colors ${sheetActive ? "bg-subtle" : ""}`}
+          className={`pressable flex w-[56px] flex-col items-center gap-[2px] rounded-[14px] py-[6px] transition-colors ${sheetActive ? "bg-subtle" : ""}`}
         >
           <Icon name="grid-apps" size={24} />
           <span className={`text-[9px] leading-none ${sheetActive ? "font-semibold text-ink" : "font-medium text-muted"}`}>Más</span>
@@ -80,7 +80,7 @@ export default function MobileNav() {
       {allOpen ? (
         <OverlayPortal>
           <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Todas las secciones">
-            <button type="button" aria-label="Cerrar" onClick={() => setAllOpen(false)} className="absolute inset-0 cursor-default bg-ink/40" />
+            <button type="button" aria-label="Cerrar" onClick={() => setAllOpen(false)} className="anim-fade-in absolute inset-0 cursor-default bg-ink/40" />
             <div className="anim-sheet-up absolute right-0 bottom-0 left-0 rounded-t-[20px] bg-canvas px-[20px] pt-[10px] pb-[28px] shadow-xl">
               <div className="mx-auto mb-[14px] h-[4px] w-[40px] rounded-full bg-line" />
               <div className="mb-[12px] flex items-center justify-between px-[4px]">
@@ -96,12 +96,12 @@ export default function MobileNav() {
               </div>
               <div className="grid grid-cols-4 gap-[10px]">
                 {rest.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setAllOpen(false)}
-                    className="flex flex-col items-center gap-[6px]"
-                  >
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setAllOpen(false)}
+                  className="pressable flex flex-col items-center gap-[6px] rounded-[12px] p-[4px]"
+                >
                     <span className="flex size-[52px] items-center justify-center rounded-[14px] bg-subtle">
                       <Icon name={item.icon} size={26} />
                     </span>

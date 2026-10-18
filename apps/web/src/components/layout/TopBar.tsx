@@ -8,6 +8,7 @@ import { onWorkspaceUpdated, workspaceMark } from "@/lib/workspace";
 import { PopoverPortal, useDismissOnOutside, usePopoverAnchor, OverlayPortal } from "@/components/ui/Popover";
 import { showNotice } from "@/lib/toast";
 import { WorkspaceDrawer } from "./Sidebar";
+import WorkspaceOnboarding from "@/components/forms/WorkspaceOnboarding";
 
 export default function TopBar() {
   const { user, logout, can } = useAuth();
@@ -28,6 +29,7 @@ export default function TopBar() {
   const { anchorRef, anchor } = usePopoverAnchor(accountOpen);
   useDismissOnOutside(accountOpen, closeAccount, useCallback(() => [anchorRef.current, panelRef.current], [anchorRef]));
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   function openAccount() {
     setAccountOpen(true);
@@ -49,8 +51,8 @@ export default function TopBar() {
 
   return (
     <header className="fixed top-[16px] right-[12px] left-[12px] z-30 flex h-[30px] items-center gap-[14px] md:right-[25px] md:left-[16px] md:gap-[22px]">
-      <span className="hidden h-[22px] shrink-0 items-center md:flex" aria-label="Chink">
-        <Icon name="chink-mark" className="h-[22px] w-auto" />
+      <span className="hidden h-[28px] shrink-0 items-center md:flex" aria-label="Chink">
+        <Icon name="chink-mark" className="h-[28px] w-auto" />
       </span>
 
       {/* Conmutador del espacio: solo móvil, abre cajón con lo mismo que en desktop. */}
@@ -60,20 +62,23 @@ export default function TopBar() {
         aria-expanded={wsOpen}
         aria-label={`Espacio de trabajo: ${spaceName}`}
         onClick={() => setWsOpen(true)}
-        className="flex min-w-0 shrink-0 items-center gap-[8px] md:hidden"
+        className="pressable flex min-w-0 shrink-0 items-center gap-[8px] rounded-[8px] md:hidden"
       >
         <Icon name={mark} size={28} />
         <span className="max-w-[130px] truncate text-[13px] font-semibold text-ink">{spaceName}</span>
         <Icon name="chevron-down-ink" size={12} />
       </button>
-      <WorkspaceDrawer open={wsOpen} onClose={() => setWsOpen(false)} />
+      <WorkspaceDrawer open={wsOpen} onClose={() => setWsOpen(false)} onNewSpace={() => setShowOnboarding(true)} />
+      <OverlayPortal>
+        <WorkspaceOnboarding open={showOnboarding} onClose={() => setShowOnboarding(false)} />
+      </OverlayPortal>
 
       <span className="min-w-0 flex-1" />
       <span className="hidden rounded-[4px] bg-surface px-[8px] py-[4px] text-[11px] leading-[1.45] text-muted sm:block">
         Entorno de ejemplo
       </span>
 
-      <button type="button" aria-label="Buscar en la página actual" onClick={() => window.dispatchEvent(new Event("chink:focus-search"))} className="flex shrink-0 items-center">
+      <button type="button" aria-label="Buscar en la página actual" onClick={() => window.dispatchEvent(new Event("chink:focus-search"))} className="pressable flex shrink-0 items-center rounded-[6px]">
         <Icon name="search-lg" size={18} />
       </button>
 
@@ -81,7 +86,7 @@ export default function TopBar() {
         type="button"
         aria-label="Notificaciones"
         onClick={() => showNotice("No hay notificaciones nuevas.", { variant: "info", icon: "info" })}
-        className="relative flex shrink-0 items-center"
+        className="pressable relative flex shrink-0 items-center rounded-[6px]"
       >
         <Icon name="notifications" />
       </button>
@@ -89,7 +94,7 @@ export default function TopBar() {
       <span className="h-[24px] w-px shrink-0 bg-line" />
 
       <div ref={anchorRef as React.RefObject<HTMLDivElement>} className="flex shrink-0 items-center gap-[9px]">
-        <button type="button" aria-haspopup="menu" aria-expanded={accountOpen} onClick={openAccount} className="flex items-center gap-[9px]">
+        <button type="button" aria-haspopup="menu" aria-expanded={accountOpen} onClick={openAccount} className="pressable flex items-center gap-[9px] rounded-[8px]">
           <span className="flex size-[30px] items-center justify-center rounded-full bg-surface text-[10px] font-semibold text-ink">
             {user?.initials ?? "—"}
           </span>
@@ -117,6 +122,17 @@ export default function TopBar() {
             >
               Configuración del espacio
             </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                closeAccount();
+                setShowOnboarding(true);
+              }}
+              className="w-full rounded-[5px] px-[8px] py-[6px] text-left text-[12px] font-semibold text-ink hover:bg-subtle"
+            >
+              <span aria-hidden className="text-[14px] leading-none">+</span> Nuevo espacio
+            </button>
             {can("admin") ? (
               <button
                 type="button"
@@ -142,7 +158,7 @@ export default function TopBar() {
         {sheetOpen ? (
           <OverlayPortal>
             <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Cuenta">
-              <button type="button" aria-label="Cerrar" onClick={() => setSheetOpen(false)} className="absolute inset-0 cursor-default bg-ink/40" />
+              <button type="button" aria-label="Cerrar" onClick={() => setSheetOpen(false)} className="anim-fade-in absolute inset-0 cursor-default bg-ink/40" />
               <div className="anim-sheet-up absolute right-0 bottom-0 left-0 rounded-t-[20px] bg-canvas px-[20px] pt-[10px] pb-[28px] shadow-xl">
               <div className="mx-auto mb-[14px] h-[4px] w-[40px] rounded-full bg-line" />
               <div className="flex flex-col items-center gap-[6px] pb-[14px]">
@@ -157,7 +173,7 @@ export default function TopBar() {
                 <button
                   type="button"
                   onClick={() => go("/configuracion?seccion=espacio")}
-                  className="flex w-full items-center gap-[12px] rounded-[8px] px-[8px] py-[12px] text-left text-[14px] text-ink transition-colors hover:bg-subtle"
+                  className="pressable flex w-full items-center gap-[12px] rounded-[8px] px-[8px] py-[12px] text-left text-[14px] text-ink transition-colors hover:bg-subtle active:bg-subtle"
                 >
                   <Icon name="nav-config" size={18} />
                   Configuración del espacio
@@ -165,7 +181,7 @@ export default function TopBar() {
                 <button
                   type="button"
                   onClick={() => go("/equipo")}
-                  className="flex w-full items-center gap-[12px] rounded-[8px] px-[8px] py-[12px] text-left text-[14px] text-ink transition-colors hover:bg-subtle"
+                  className="pressable flex w-full items-center gap-[12px] rounded-[8px] px-[8px] py-[12px] text-left text-[14px] text-ink transition-colors hover:bg-subtle active:bg-subtle"
                 >
                   <Icon name="nav-equipo" size={18} />
                   Gestionar equipo
@@ -173,7 +189,7 @@ export default function TopBar() {
                 <button
                   type="button"
                   onClick={signOut}
-                  className="flex w-full items-center gap-[12px] rounded-[8px] px-[8px] py-[12px] text-left text-[14px] text-ink transition-colors hover:bg-subtle"
+                  className="pressable flex w-full items-center gap-[12px] rounded-[8px] px-[8px] py-[12px] text-left text-[14px] text-ink transition-colors hover:bg-subtle active:bg-subtle"
                 >
                   <Icon name="logout" size={18} />
                   Cerrar sesión

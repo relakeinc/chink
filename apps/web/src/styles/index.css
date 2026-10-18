@@ -37,6 +37,13 @@
   button {
     font: inherit;
     cursor: pointer;
+    /* Respuesta táctil nativa: sin flash gris ni espera de doble tap. */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  a {
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Oculta los controles nativos del input de rango/color */
@@ -49,6 +56,14 @@
 @layer utilities {
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Micro-interacción estándar: hundido al presionar (ratón y táctil). */
+  .pressable {
+    transition: transform 120ms ease-out;
+  }
+  .pressable:active {
+    transform: scale(0.96);
   }
 
   /* Oculta la barra de scroll manteniendo el desplazamiento con rueda. */

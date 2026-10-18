@@ -235,6 +235,11 @@ export const api = {
       body: { email, password },
     }),
   me: () => request<{ user: SessionUser; permissions: string[] }>("/api/auth/me"),
+  register: (body: { name: string; email: string; password: string }) =>
+    request<{ token: string; user: SessionUser; permissions: string[]; mustActivate: boolean }>("/api/auth/register", {
+      method: "POST",
+      body,
+    }),
   activate: (body: { currentPassword: string; newPassword: string }) =>
     request<{ token: string; user: SessionUser; permissions: string[] }>("/api/auth/activate", { method: "PATCH", body }),
   changePassword: (body: { currentPassword: string; newPassword: string }) =>
@@ -274,7 +279,7 @@ export const api = {
     destinationId?: string | null;
     note?: string;
   }) =>
-    request<{ data: { id: string; ref: string; type: string; product: string; sku: string; quantity: number; owner: string; status: string }; stockDelta: number }>(
+    request<{ data: { id: string; ref: string; type: string; product: string; sku: string; quantity: number; owner: string; status: string }; stockDelta: number; crossedLowStock: { product: string; sku: string; stock: number; minStock: number } | null }>(
       "/api/movements",
       { method: "POST", body },
     ),

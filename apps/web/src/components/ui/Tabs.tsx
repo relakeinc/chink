@@ -50,9 +50,9 @@ export default function Tabs({ items, active, onChange, gap = 24, children }: Ta
               key={item.id}
               type="button"
               data-tab={item.id}
-              onClick={() => onChange(item.id)}
-              aria-current={isActive ? "page" : undefined}
-              className={`flex h-[50px] items-center gap-[8px] text-[13px] leading-[1.4] transition-colors duration-150 ${
+          onClick={() => onChange(item.id)}
+          aria-current={isActive ? "page" : undefined}
+          className={`pressable flex h-[50px] items-center gap-[8px] text-[13px] leading-[1.4] transition-colors duration-150 ${
                 isActive ? "font-semibold text-ink" : "font-normal text-muted hover:text-ink"
               }`}
             >

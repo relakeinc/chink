@@ -60,7 +60,7 @@ export function Button({
   return (
     <button
       type="button"
-      className={`inline-flex shrink-0 items-center justify-center rounded-[8px] text-[13px] leading-[1.4] transition-opacity hover:opacity-90 ${VARIANTS[variant]} ${HEIGHTS[height]} ${metrics.padding} ${metrics.gap} ${className}`}
+      className={`pressable inline-flex shrink-0 items-center justify-center rounded-[8px] text-[13px] leading-[1.4] transition-opacity hover:opacity-90 ${VARIANTS[variant]} ${HEIGHTS[height]} ${metrics.padding} ${metrics.gap} ${className}`}
       {...rest}
     >
       {resolvedIcon ? <Icon name={resolvedIcon} size={iconSize} className={toneClass} /> : null}
@@ -118,7 +118,7 @@ export function LinkAction({ children, onClick }: { children: ReactNode; onClick
     <button
       type="button"
       onClick={onClick}
-      className="-mx-[6px] -my-[3px] shrink-0 rounded-[5px] px-[6px] py-[3px] text-[11px] font-semibold text-ink transition-colors duration-150 hover:bg-subtle"
+      className="pressable -mx-[6px] -my-[3px] shrink-0 rounded-[5px] px-[6px] py-[3px] text-[11px] font-semibold text-ink transition-colors duration-150 hover:bg-subtle active:bg-subtle"
     >
       {children}
     </button>

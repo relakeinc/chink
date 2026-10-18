@@ -101,8 +101,8 @@ export default function DateRangePicker({ value, onChange, placeholder = "Todas 
         onClick={() => setOpen((prev) => !prev)}
         className={
           compact
-            ? "flex size-[36px] items-center justify-center rounded-[6px] border border-line-strong bg-ink text-canvas transition-colors hover:bg-shell"
-            : "flex h-[36px] items-center gap-[10px] rounded-[6px] border border-line-strong bg-ink px-[12px] text-[12px] leading-[1.4] whitespace-nowrap text-canvas transition-colors hover:bg-shell"
+            ? "pressable flex size-[36px] items-center justify-center rounded-[6px] border border-line-strong bg-ink text-canvas transition-colors hover:bg-shell"
+            : "pressable flex h-[36px] items-center gap-[10px] rounded-[6px] border border-line-strong bg-ink px-[12px] text-[12px] leading-[1.4] whitespace-nowrap text-canvas transition-colors hover:bg-shell"
         }
       >
         {compact ? null : formatRange(value, placeholder)}
