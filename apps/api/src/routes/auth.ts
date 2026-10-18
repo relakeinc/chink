@@ -54,6 +54,75 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  /**
+   * Registro público: crea la cuenta ACTIVA con el rol más básico (Consulta).
+   * Sin invitaciones: cualquiera con el enlace puede entrar a consultar.
+   */
+  app.post(
+    "/register",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["name", "email", "password"],
+          properties: {
+            name: { type: "string", minLength: 2, maxLength: 80 },
+            email: { type: "string", minLength: 3, maxLength: 120 },
+            password: { type: "string", minLength: 8, maxLength: 72 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { name, email, password } = request.body as { name: string; email: string; password: string };
+      const cleanEmail = email.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) {
+        return reply.status(400).send({ error: "El correo no parece válido" });
+      }
+      const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
+      if (existing) return reply.status(409).send({ error: "Ese correo ya tiene cuenta. Inicia sesión." });
+
+      const role = await prisma.role.findFirst({ where: { name: "Consulta" } });
+      if (!role) return reply.status(500).send({ error: "Roles sin inicializar" });
+
+      const initials = name
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? "")
+        .join("");
+
+      const created = await prisma.user.create({
+        data: {
+          email: cleanEmail,
+          name: name.trim(),
+          initials: initials || "?",
+          passwordHash: await bcrypt.hash(password, 10),
+          roleId: role.id,
+          status: "ACTIVE",
+          lastAccessAt: new Date(),
+        },
+        include: { role: { include: { permissions: { include: { permission: true } } } } },
+      });
+
+      const session = {
+        id: created.id,
+        email: created.email,
+        name: created.name,
+        initials: created.initials,
+        role: created.role.name,
+        status: created.status,
+      };
+
+      return reply.status(201).send({
+        token: app.jwt.sign(session, { expiresIn: "7d" }),
+        user: session,
+        permissions: created.role.permissions.filter((p) => p.allowed).map((p) => p.permission.key),
+        mustActivate: false,
+      });
+    },
+  );
+
   /** Cambio de contraseña de la sesión activa. */
   app.patch(
     "/password",
@@ -153,7 +222,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  /** Perfil de la sesión activa. */  app.get("/me", { onRequest: (request, reply) => app.authenticate(request, reply) }, async (request) => {
+    /** Perfil de la sesión activa. */  app.get("/me", { onRequest: (request, reply) => app.authenticate(request, reply) }, async (request) => {
     const user = await prisma.user.findUnique({
       where: { id: request.user.id },
       include: { role: { include: { permissions: { include: { permission: true } } } } },

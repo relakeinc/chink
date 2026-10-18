@@ -200,6 +200,9 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
         status: "Confirmado",
       },
       stockDelta,
+      crossedLowStock: crossedBelow
+        ? { product: created.product.name, sku: created.product.sku, stock: created.product.stock, minStock: product.minStock }
+        : null,
     });
   });
 
