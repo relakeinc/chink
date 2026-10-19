@@ -266,6 +266,10 @@ async function canjearCodigo(msg: TgMessage, chatId: bigint): Promise<void> {
   });
   await prisma.codigoVinculacion.update({ where: { id: registro.id }, data: { usadoEn: new Date() } });
 
+  // La app se entera por SSE y muestra el chat sin recargar (en móvil el
+  // PWA en segundo plano no revalida solo).
+  await publishToWorkspace(registro.workspaceId, { channels: ["telegram"] });
+
   await telegramSendMessage(
     chatId.toString(),
     `✅ Vinculado al espacio "${registro.workspace.spaceName}".\n\nYa puedes enviarme fotos de comprobantes y los registraré ahí. 📸\n\nSi vinculas más espacios, usa /espacios para cambiar entre ellos.`,
@@ -305,6 +309,8 @@ async function usarEspacio(msg: TgMessage, chatId: bigint): Promise<void> {
   }
 
   await prisma.telegramChat.update({ where: { id: elegido.id }, data: { ultimoUso: new Date() } });
+  // Cambia el orden de /espacios: la app lo refleja sin recargar.
+  await publishToWorkspace(elegido.workspaceId, { channels: ["telegram"] });
   await telegramSendMessage(chatId.toString(), `✅ Espacio activo: "${elegido.workspace.spaceName}". Los próximos comprobantes van ahí.`);
 }
 

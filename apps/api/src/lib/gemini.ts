@@ -16,6 +16,27 @@ function nextKey(): string {
   return key;
 }
 
+/**
+ * Cadena de modelos a probar: el primario (`GEMINI_MODEL`) y luego los de
+ * `GEMINI_FALLBACK_MODELS`. Google retira modelos Lite sin aviso (el 2.0
+ * murió con un 404 en pleno uso); sin fallback, todas las fotos del bot
+ * fallan hasta que alguien edita el .env del servidor.
+ */
+function modelChain(): string[] {
+  const primary = (process.env.GEMINI_MODEL || "").trim() || "gemini-2.5-flash-lite";
+  const fallbacks = (process.env.GEMINI_FALLBACK_MODELS || "gemini-2.5-flash-lite,gemini-flash-lite-latest")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  return [primary, ...fallbacks.filter((m) => m !== primary)];
+}
+
+/** 404 / "no longer available": el modelo fue retirado, probar el siguiente. */
+function esModeloRetirado(error: unknown): boolean {
+  const message = String((error as { message?: unknown })?.message || "");
+  return /404|not\s*found|no longer available/i.test(message);
+}
+
 export function cleanMarkdownBlocks(text: unknown): string {
   const raw = String(text ?? "").trim();
   if (!raw) return raw;
@@ -29,31 +50,35 @@ export function cleanMarkdownBlocks(text: unknown): string {
   return raw;
 }
 
-/** Llama a Gemini con imagen y devuelve el texto limpio. Rota keys ante rate limit. */
+/** Llama a Gemini con imagen y devuelve el texto limpio. Rota keys ante rate limit y modelos ante retiros. */
 export async function runGeminiPrompt(prompt: string, base64Image: string, mimeType: string): Promise<string> {
   const keys = geminiKeys();
   if (keys.length === 0) throw new Error("No hay API keys de Gemini configuradas");
-  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
   let lastError: unknown = null;
-  for (let attempt = 0; attempt < keys.length; attempt += 1) {
-    const key = nextKey();
-    try {
-      const genAI = new GoogleGenerativeAI(key);
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { data: base64Image, mimeType: mimeType || "image/jpeg" } }] }],
-      });
-      return cleanMarkdownBlocks(result?.response?.text?.());
-    } catch (error) {
-      lastError = error;
-      const message = String((error as { message?: unknown })?.message || "");
-      if (/429|rate limit/i.test(message) && attempt < keys.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        continue;
+  for (const modelName of modelChain()) {
+    for (let attempt = 0; attempt < keys.length; attempt += 1) {
+      const key = nextKey();
+      try {
+        const genAI = new GoogleGenerativeAI(key);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { data: base64Image, mimeType: mimeType || "image/jpeg" } }] }],
+        });
+        return cleanMarkdownBlocks(result?.response?.text?.());
+      } catch (error) {
+        lastError = error;
+        const message = String((error as { message?: unknown })?.message || "");
+        if (/429|rate limit/i.test(message) && attempt < keys.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+        break;
       }
-      throw error;
     }
+    // Solo se cambia de modelo si el actual fue retirado; otro error (red,
+    // clave inválida, imagen) se propaga tal cual.
+    if (!esModeloRetirado(lastError)) throw lastError;
   }
   throw lastError ?? new Error("Gemini no respondió");
 }
