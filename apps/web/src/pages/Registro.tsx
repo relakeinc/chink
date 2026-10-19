@@ -56,15 +56,15 @@ export default function Registro() {
         {error ? <p className="text-[12px] text-warn">{error}</p> : null}
         <label className="flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Nombre</span>
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" autoComplete="name" required minLength={2} className={fieldClass} />
+          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" autoComplete="name" autoCapitalize="words" enterKeyHint="next" required minLength={2} className={fieldClass} />
         </label>
         <label className="flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Correo electrónico</span>
-          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" autoComplete="email" required className={fieldClass} />
+          <input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="next" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" autoComplete="email" required className={fieldClass} />
         </label>
         <label className="flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Contraseña</span>
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 8 caracteres" autoComplete="new-password" required minLength={8} className={fieldClass} />
+          <input type="password" enterKeyHint="go" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 8 caracteres" autoComplete="new-password" required minLength={8} className={fieldClass} />
         </label>
         <Button variant="primary" height={38} type="submit" disabled={sending} className="mt-[4px] w-full">
           {sending ? "Creando…" : "Crear cuenta"}

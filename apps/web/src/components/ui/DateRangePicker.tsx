@@ -118,7 +118,7 @@ export default function DateRangePicker({ value, onChange, placeholder = "Todas 
 
       {/* Portal a `body`: dentro de `main` el calendario quedaría recortado. */}
       <PopoverPortal anchor={anchor} className="flex flex-col rounded-[8px] border border-edge bg-canvas p-[12px] shadow-lg">
-        <div ref={panelRef} role="dialog" aria-label="Rango de fechas" className="anim-pop min-h-0 w-[268px] overflow-y-auto">
+        <div ref={panelRef} role="dialog" aria-label="Rango de fechas" className="anim-pop min-h-0 w-[min(268px,calc(100vw-16px))] overflow-y-auto">
           {/* Cabecera del mes */}
           <div className="mb-[10px] flex items-center justify-between">
             <button

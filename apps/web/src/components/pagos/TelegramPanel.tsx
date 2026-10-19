@@ -57,7 +57,9 @@ export default function TelegramPanel() {
   return (
     <div className="flex flex-col gap-[14px] rounded-[8px] border border-edge p-[20px]">
       <h2 className="flex items-center gap-[8px] text-[13px] font-semibold text-ink">
-        <Icon name="mail" size={16} />
+        <span className="flex size-[24px] items-center justify-center rounded-[6px] bg-[#229ED9]">
+          <Icon name="telegram" size={15} />
+        </span>
         Telegram del espacio
       </h2>
 

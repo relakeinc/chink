@@ -24,7 +24,7 @@ export const MAIN_NAV: NavItem[] = [
   { to: "/inventario", label: "Inventario", icon: "nav-inventario", permission: "consult" },
   { to: "/movimientos", label: "Movimientos", icon: "nav-movimientos", permission: "consult" },
   { to: "/almacenes", label: "Almacenes", icon: "nav-almacenes", permission: "consult" },
-  { to: "/pagos", label: "Pagos", icon: "ticket", permission: "consult" },
+  { to: "/pagos", label: "Pagos", icon: "nav-pagos", permission: "consult" },
   { to: "/reportes", label: "Reportes", icon: "nav-reportes", permission: "report" },
 ];
 

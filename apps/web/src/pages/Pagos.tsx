@@ -80,6 +80,8 @@ export default function Pagos() {
     try {
       await api.updatePago(pago.id, { estado: "verificado" });
       showNotice("Pago marcado como verificado.");
+      void list.reload();
+      void cierre.reload();
     } catch (cause) {
       showNotice(cause instanceof Error ? cause.message : "No se pudo actualizar", { variant: "error" });
     }
@@ -90,9 +92,18 @@ export default function Pagos() {
     try {
       await api.deletePago(pago.id);
       showNotice("Comprobante eliminado.");
+      void list.reload();
+      void cierre.reload();
     } catch (cause) {
       showNotice(cause instanceof Error ? cause.message : "No se pudo eliminar", { variant: "error" });
     }
+  }
+
+  /** Tras registrar o editar: recarga explícita (el SSE además avisa al resto). */
+  function pagoGuardado(editando: boolean) {
+    void list.reload();
+    void cierre.reload();
+    showNotice(editando ? "Comprobante actualizado." : "Pago registrado.");
   }
 
   const kpis = cierre.data
@@ -252,9 +263,9 @@ export default function Pagos() {
       <PageFooter left="Comprobantes registrados por el bot o a mano" right="Montos en COP" />
       <div className="h-[24px]" />
 
-      <PagoModal open={showPago} onClose={() => setShowPago(false)} />
+      <PagoModal open={showPago} onClose={() => setShowPago(false)} onSaved={() => pagoGuardado(false)} />
       {editPago ? (
-        <PagoModal open onClose={() => setEditPago(null)} initial={editPago} />
+        <PagoModal open onClose={() => setEditPago(null)} initial={editPago} onSaved={() => pagoGuardado(true)} />
       ) : null}
     </>
   );

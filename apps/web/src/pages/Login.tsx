@@ -56,11 +56,11 @@ export default function Login() {
         {error ? <p className="text-[12px] text-warn">{error}</p> : null}
         <label className="flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Correo electrónico</span>
-          <input type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} className={fieldClass} />
+          <input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="next" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} className={fieldClass} />
         </label>
         <label className="flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Contraseña</span>
-          <input type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass} />
+          <input type="password" enterKeyHint="go" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass} />
         </label>
         <Button variant="primary" height={38} type="submit" disabled={sending} className="mt-[4px] w-full">
           {sending ? "Entrando…" : "Entrar"}

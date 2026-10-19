@@ -31,6 +31,7 @@ import i_nav_equipo from "@/assets/icons/nav-equipo.svg";
 import i_nav_inicio from "@/assets/icons/nav-inicio.svg";
 import i_nav_inventario from "@/assets/icons/nav-inventario.svg";
 import i_nav_movimientos from "@/assets/icons/nav-movimientos.svg";
+import i_nav_pagos from "@/assets/icons/nav-pagos.svg";
 import i_nav_reportes from "@/assets/icons/nav-reportes.svg";
 import i_notifications from "@/assets/icons/notifications.svg";
 import i_package_18 from "@/assets/icons/package-18.svg";
@@ -46,6 +47,7 @@ import i_shield_check_filter from "@/assets/icons/shield-check-filter.svg";
 import i_shield_check from "@/assets/icons/shield-check.svg";
 import i_smartphone from "@/assets/icons/smartphone.svg";
 import i_spiderweb from "@/assets/icons/spiderweb.svg";
+import i_telegram from "@/assets/icons/telegram.svg";
 import i_ticket from "@/assets/icons/ticket.svg";
 import i_toggle_off from "@/assets/icons/toggle-off.svg";
 import i_toggle_on from "@/assets/icons/toggle-on.svg";
@@ -97,6 +99,7 @@ export const ICONS: Record<string, string> = {
   "nav-inicio": i_nav_inicio,
   "nav-inventario": i_nav_inventario,
   "nav-movimientos": i_nav_movimientos,
+  "nav-pagos": i_nav_pagos,
   "nav-reportes": i_nav_reportes,
   "notifications": i_notifications,
   "package-18": i_package_18,
@@ -112,6 +115,7 @@ export const ICONS: Record<string, string> = {
   "shield-check": i_shield_check,
   "smartphone": i_smartphone,
   "spiderweb": i_spiderweb,
+  "telegram": i_telegram,
   "ticket": i_ticket,
   "toggle-off": i_toggle_off,
   "toggle-on": i_toggle_on,

@@ -46,6 +46,50 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /*
+   * App nativa, no web: nada seleccionable salvo el texto de lectura y los
+   * campos. Evita el resaltado azul y el callout de iOS al mantener pulsado
+   * botones, dock, tarjetas y menús.
+   */
+  button,
+  a,
+  [role="button"],
+  [role="menuitem"],
+  [role="menuitemradio"],
+  nav {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  select {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  /* El indicador nativo del calendario hereda el esquema claro del diseño;
+   * en Halloween (fondo oscuro) pasa a esquema oscuro para seguir visible. */
+  :where(:root) {
+    color-scheme: light;
+  }
+  [data-theme="halloween"] {
+    color-scheme: dark;
+  }
+
+  /* iOS alinea mal el texto del `input[type="date"]` nativo y recorta su
+   * indicador: altura mínima propia y gesto solo vertical para no pelear
+   * con el scroll del modal. */
+  input[type="date"] {
+    min-height: 38px;
+    touch-action: pan-y;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.6;
+    cursor: pointer;
+  }
+
   /* Oculta los controles nativos del input de rango/color */
   input::placeholder {
     color: inherit;
@@ -129,5 +173,18 @@
     --sbt-warning-fg: var(--color-warn);
     --sbt-info-bg: var(--color-shell);
     --sbt-info-fg: var(--color-canvas);
+  }
+}
+
+/*
+ * iOS hace zoom automático al enfocar campos con fuente menor de 16 px.
+ * En móvil se sube a 16 px solo la letra (la caja conserva su altura), así el
+ * PWA no salta de escala al escribir. Sin capas: gana a las utilidades.
+ */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
 }

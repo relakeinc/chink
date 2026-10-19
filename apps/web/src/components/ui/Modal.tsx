@@ -14,10 +14,10 @@ export default function Modal({ open, title, description, onClose, children, foo
   if (!open) return null;
 
   return (
-    <div style={{ zIndex: LAYERS.modal }} className="fixed inset-0 flex items-center justify-center bg-black/40 p-[20px]">
+    <div style={{ zIndex: LAYERS.modal }} className="fixed inset-0 flex items-center justify-center overflow-y-auto bg-black/40 p-[20px]">
       {/* El fondo usa opacidad pura para poder transicionar sin `backdrop-filter`. */}
       <button type="button" aria-label="Cerrar" onClick={onClose} className="anim-fade-in absolute inset-0 cursor-default" />
-      <div className="anim-pop relative w-full max-w-[520px] rounded-[10px] bg-canvas p-[20px] shadow-xl">
+      <div className="anim-pop relative my-auto max-h-[calc(100dvh-40px)] w-full max-w-[520px] overflow-y-auto rounded-[10px] bg-canvas p-[20px] shadow-xl">
         <div className="flex items-start justify-between gap-[12px]">
           <div>
             <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">{title}</h2>

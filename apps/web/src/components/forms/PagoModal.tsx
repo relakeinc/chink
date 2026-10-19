@@ -26,9 +26,11 @@ interface PagoModalProps {
   onClose: () => void;
   /** Edición: precarga y guarda PATCH. Sin initial: alta. */
   initial?: PagoRow;
+  /** Se llama tras guardar (alta o edición) para recargar y avisar. */
+  onSaved?: () => void;
 }
 
-export default function PagoModal({ open, onClose, initial }: PagoModalProps) {
+export default function PagoModal({ open, onClose, initial, onSaved }: PagoModalProps) {
   const [clientes, setClientes] = useState<{ id: string; nombre: string }[]>([]);
   const [monto, setMonto] = useState("");
   const [bancoDestino, setBancoDestino] = useState("");
@@ -89,6 +91,7 @@ export default function PagoModal({ open, onClose, initial }: PagoModalProps) {
           clienteId: clienteId || undefined,
         });
       }
+      onSaved?.();
       onClose();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar el pago");

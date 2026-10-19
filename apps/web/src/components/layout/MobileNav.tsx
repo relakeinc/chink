@@ -5,8 +5,8 @@ import { useAuth } from "@/context/AuthContext";
 import { OverlayPortal } from "@/components/ui/Popover";
 import { ADMIN_NAV, MAIN_NAV } from "./Sidebar";
 
-/** Secciones principales del dock: Inicio, Inventario y Equipo. */
-const DOCK_PATHS = ["/inicio", "/inventario", "/equipo"];
+/** Dock móvil: Inicio, Inventario y Pagos (un toque; Equipo vive en "Más"). */
+const DOCK_PATHS = ["/inicio", "/inventario", "/pagos"];
 
 interface DockItem {
   to: string;
