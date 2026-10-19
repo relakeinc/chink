@@ -14,6 +14,7 @@ import { streamRoutes } from "./routes/stream.js";
 import { pagoRoutes } from "./routes/pagos.js";
 import { clienteRoutes } from "./routes/clientes.js";
 import { telegramRoutes, telegramWebhookRoutes } from "./routes/telegram.js";
+import { eventosRoutes } from "./routes/eventos.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -29,6 +30,9 @@ export async function buildApp() {
 
   // Webhook público de Telegram (verifica secreto, no JWT).
   await app.register(telegramWebhookRoutes, { prefix: "/api/telegram" });
+
+  // Tiempo real por SSE para comprobantes y notificaciones.
+  await app.register(eventosRoutes, { prefix: "/api/eventos" });
 
   // Tiempo real por SSE (el token va en la query: EventSource no manda cabeceras).
   await app.register(streamRoutes, { prefix: "/api" });
