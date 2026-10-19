@@ -19,6 +19,7 @@ void registerTelegramWebhook(app).catch((error: unknown) =>
 /**
  * Registra el webhook del bot en Telegram al arrancar (solo con APP_URL https).
  * Sin TELEGRAM_BOT_TOKEN o sin HTTPS (dev local), se omite sin romper nada.
+ * Con reintentos: un fallo de red al arrancar dejaba al bot muerto en silencio.
  */
 async function registerTelegramWebhook(app: { log: { info: (...args: unknown[]) => void } }): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
@@ -29,14 +30,24 @@ async function registerTelegramWebhook(app: { log: { info: (...args: unknown[]) 
   }
 
   const webhookUrl = `${baseUrl}/api/telegram/webhook`;
-  const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: webhookUrl, secret_token: secret }),
-  });
-  const payload = (await response.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
-  if (!response.ok || !payload?.ok) {
-    throw new Error(payload?.description ?? `HTTP ${response.status}`);
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: webhookUrl, secret_token: secret }),
+      });
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.description ?? `HTTP ${response.status}`);
+      }
+      app.log.info(`Webhook de Telegram registrado en ${webhookUrl}`);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
+    }
   }
-  app.log.info(`Webhook de Telegram registrado en ${webhookUrl}`);
+  throw lastError;
 }
