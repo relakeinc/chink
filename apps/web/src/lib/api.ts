@@ -74,6 +74,9 @@ function channelsFor(path: string): string[] {
   if (path.startsWith("/api/team")) return ["team"];
   if (path.startsWith("/api/settings")) return ["settings"];
   if (path.startsWith("/api/notifications")) return ["notifications"];
+  if (path.startsWith("/api/pagos")) return ["pagos", "dashboard"];
+  if (path.startsWith("/api/clientes")) return ["clientes"];
+  if (path.startsWith("/api/telegram")) return ["telegram", "config"];
   return [];
 }
 
@@ -163,6 +166,24 @@ export interface MovementSummary {
   adjustments: { units: number; count: number };
   net: number;
   balance: number;
+}
+
+export interface PagoRow {
+  id: string;
+  monto: number;
+  estado: string;
+  banco_destino: string | null;
+  fuente_fondos: string | null;
+  numero_destino: string | null;
+  referencia: string | null;
+  fecha_pago: string | null;
+  hora: string | null;
+  para: string | null;
+  cliente_id: string | null;
+  cliente: string | null;
+  imagen_url: string | null;
+  notas: string | null;
+  creada: string;
 }
 
 export interface Member {
@@ -369,6 +390,49 @@ export const api = {
   getExports: () => request<{ data: ExportableReport[] }>("/api/reports/exports"),
   getLowStock: () =>
     request<{ data: { name: string; sku: string; minStock: number; stock: number; imageUrl: string | null }[] }>("/api/reports/low-stock"),
+
+  /* Pagos (comprobantes del espacio) */
+  getPagos: (params?: QueryParams) =>
+    request<{ data: PagoRow[]; meta: ListMeta }>("/api/pagos", { params }),
+  getPagosSemana: () => request<{ monto: number; fecha_pago: string | null }[]>("/api/pagos/semana"),
+  getPago: (id: string) => request<{ data: PagoRow }>("/api/pagos/" + id),
+  createPago: (body: {
+    monto: number; clienteId?: string | null; bancoDestino?: string; fuenteFondos?: string;
+    referencia?: string; fechaPago?: string; horaPago?: string; para?: string;
+    numeroDestino?: string; numeroOrigen?: string; notas?: string;
+  }) => request<{ data: PagoRow }>("/api/pagos", { method: "POST", body }),
+  updatePago: (id: string, body: { estado?: string; notas?: string; clienteId?: string | null }) =>
+    request<{ data: PagoRow }>(`/api/pagos/${id}`, { method: "PATCH", body }),
+  deletePago: (id: string) => request<{ ok: boolean }>(`/api/pagos/${id}`, { method: "DELETE" }),
+  getCierre: (fecha?: string) =>
+    request<{
+      fecha: string; totalVerificado: number; countVerificado: number; totalRevisar: number; countRevisar: number;
+      porBanco: { banco: string; total: number; cantidad: number }[];
+      detalle: { id: string; monto: number; estado: string; banco_destino: string | null; fuente_fondos: string | null; numero_destino: string | null; referencia: string | null; hora: string | null; cliente: string | null; para: string | null }[];
+    }>("/api/pagos/cierre/resumen", { params: fecha ? { fecha } : undefined }),
+
+  /* Clientes del espacio */
+  getClientes: (params?: QueryParams) =>
+    request<{
+      data: { id: string; nombre: string; numero_contacto: string | null; notas: string | null; total_pagos: number; monto_total: number; ultimo_pago: string | null }[];
+    }>("/api/clientes", { params }),
+  createCliente: (body: { nombre: string; numeroContacto?: string | null; notas?: string | null }) =>
+    request<{ data: { id: string; nombre: string } }>("/api/clientes", { method: "POST", body }),
+  updateCliente: (id: string, body: { nombre?: string; numeroContacto?: string | null; notas?: string | null }) =>
+    request<{ data: { id: string } }>(`/api/clientes/${id}`, { method: "PATCH", body }),
+  deleteCliente: (id: string) => request<{ ok: boolean }>(`/api/clientes/${id}`, { method: "DELETE" }),
+
+  /* Telegram del espacio */
+  getTelegramEstado: () =>
+    request<{
+      data: {
+        botConfigurado: boolean; botUsername: string | null; rol: string; puedeVincular: boolean;
+        chats: { id: string; chatId: string; apodo: string | null; activo: boolean; ultimoUso: string | null; usuario: { id: string; nombre: string; email: string } | null }[];
+      };
+    }>("/api/telegram/estado"),
+  generarCodigoTelegram: () =>
+    request<{ data: { codigo: string; expiraEn: string; instrucciones: string } }>("/api/telegram/codigo", { method: "POST", body: {} }),
+  desvincularChat: (chatId: string) => request<{ ok: boolean }>(`/api/telegram/chats/${chatId}`, { method: "DELETE" }),
 
   /* Configuración */
   getSettings: () =>

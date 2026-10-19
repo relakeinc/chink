@@ -16,6 +16,7 @@
     "@chink-saas/db": "workspace:*",
     "@fastify/cors": "^10.0.2",
     "@fastify/jwt": "^9.0.4",
+    "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^2.4.3",
     "fastify": "^5.2.1",
     "nodemailer": "^10.1.1",

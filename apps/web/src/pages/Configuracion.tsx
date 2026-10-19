@@ -10,6 +10,7 @@ import { PageFooter, PageHeader } from "@/components/ui/KpiStrip";
 import Tabs from "@/components/ui/Tabs";
 import { FilterSelect } from "@/components/ui/inputs";
 import { Button, Card, Toggle } from "@/components/ui/primitives";
+import TelegramPanel from "@/components/pagos/TelegramPanel";
 import { Icon } from "@/components/ui/Icon";
 import { useNotice } from "@/lib/toast";
 
@@ -310,8 +311,10 @@ export default function Configuracion() {
                   {formatUnits(summary.available)} + {formatUnits(summary.reserved)}
                 </span>
                 <span className="font-semibold text-ink">= {formatUnits(summary.totalStock)}</span>
+                </div>
               </div>
-            </div>
+
+            <TelegramPanel />
 
             <div className="flex items-center gap-[10px] rounded-[8px] bg-success-bg p-[16px]">
               <Icon name="check-circle" size={18} />

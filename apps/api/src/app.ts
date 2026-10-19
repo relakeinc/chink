@@ -11,6 +11,9 @@ import { reportRoutes } from "./routes/reports.js";
 import { settingRoutes } from "./routes/settings.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { streamRoutes } from "./routes/stream.js";
+import { pagoRoutes } from "./routes/pagos.js";
+import { clienteRoutes } from "./routes/clientes.js";
+import { telegramRoutes, telegramWebhookRoutes } from "./routes/telegram.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -23,6 +26,9 @@ export async function buildApp() {
   app.get("/api/health", async () => ({ status: "ok" }));
 
   await app.register(authRoutes, { prefix: "/api/auth" });
+
+  // Webhook público de Telegram (verifica secreto, no JWT).
+  await app.register(telegramWebhookRoutes, { prefix: "/api/telegram" });
 
   // Tiempo real por SSE (el token va en la query: EventSource no manda cabeceras).
   await app.register(streamRoutes, { prefix: "/api" });
@@ -41,6 +47,9 @@ export async function buildApp() {
       await protectedApp.register(reportRoutes, { prefix: "/api/reports" });
       await protectedApp.register(settingRoutes, { prefix: "/api/settings" });
       await protectedApp.register(notificationRoutes, { prefix: "/api/notifications" });
+      await protectedApp.register(pagoRoutes, { prefix: "/api/pagos" });
+      await protectedApp.register(clienteRoutes, { prefix: "/api/clientes" });
+      await protectedApp.register(telegramRoutes, { prefix: "/api/telegram" });
     },
     { prefix: "/" },
   );

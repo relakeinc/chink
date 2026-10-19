@@ -93,3 +93,20 @@ export async function deleteR2Object(key: string): Promise<void> {
   const config = getR2Config();
   await getR2Client(config).send(new DeleteObjectCommand({ Bucket: config.bucket, Key: key }));
 }
+
+/** Subida directa desde el servidor (el bot guarda comprobantes sin pasar por el navegador). */
+export async function uploadBufferToR2(buffer: Buffer, key: string, contentType: string): Promise<string> {
+  const config = getR2Config();
+  if (key.includes("..") || key.length > 220) throw new Error("Clave de objeto no válida.");
+  await getR2Client(config).send(
+    new PutObjectCommand({ Bucket: config.bucket, Key: key, Body: buffer, ContentType: contentType }),
+  );
+  return publicUrlFor(config, key);
+}
+
+export function buildReceiptImageKey(workspaceId: string, extension: string): string {
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(workspaceId)) throw new Error("Espacio no válido.");
+  const ext = extension.startsWith(".") ? extension.slice(1) : extension;
+  if (!/^[a-z0-9]{2,5}$/.test(ext)) throw new Error("Extensión no válida.");
+  return `receipts/${workspaceId}/${crypto.randomUUID()}.${ext}`;
+}

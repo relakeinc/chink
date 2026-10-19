@@ -58,6 +58,9 @@ model User {
   settingsUpdates   WorkspaceSetting[]
   memberships       SpaceMember[]
   notifications     Notification[]
+  telegramChats     TelegramChat[]
+  registeredPagos   Pago[]           @relation("PagoRegistradoPor")
+  linkCodes         CodigoVinculacion[] @relation("CodigoCreador")
 
   @@index([workspaceId])
   @@map("users")
@@ -259,6 +262,10 @@ model WorkspaceSetting {
   updatedBy   User?   @relation(fields: [updatedById], references: [id], onDelete: SetNull)
   updatedAt   DateTime @updatedAt
   members     SpaceMember[]
+  clientes    Cliente[]
+  pagos       Pago[]
+  telegramChats TelegramChat[]
+  linkCodes   CodigoVinculacion[]
 
   @@map("workspace_settings")
 }
@@ -296,4 +303,96 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
+}
+
+// ------------------------------------------------------------------- Pagos
+
+/// Clientes del espacio (para asociar comprobantes de pago).
+model Cliente {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  workspace      WorkspaceSetting @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  nombre         String
+  numeroContacto String?
+  notas          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  pagos Pago[]
+
+  @@index([workspaceId])
+  @@map("clientes")
+}
+
+/// Comprobante de pago registrado por OCR del bot o a mano.
+/// La referencia es única por espacio: así no hay duplicados.
+model Pago {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  workspace      WorkspaceSetting @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  clienteId      String?
+  cliente        Cliente?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  telegramChatId String?
+  telegramChat   TelegramChat? @relation(fields: [telegramChatId], references: [id], onDelete: SetNull)
+  registradoPorId String?
+  registradoPor  User?         @relation("PagoRegistradoPor", fields: [registradoPorId], references: [id], onDelete: SetNull)
+  estado         String        @default("verificado")
+  para           String?
+  numeroDestino  String?
+  bancoDestino   String?
+  fechaPago      DateTime?
+  horaPago       String?
+  monto          Decimal       @db.Decimal(14, 2)
+  referencia     String?
+  numeroOrigen   String?
+  fuenteFondos   String?
+  imageKey       String?
+  imageUrl       String?
+  rawJson        Json?
+  notas          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([workspaceId, referencia])
+  @@index([workspaceId])
+  @@index([workspaceId, estado])
+  @@map("pagos")
+}
+
+/// Chat de Telegram vinculado a un espacio (uno por cuenta de Telegram y espacio).
+model TelegramChat {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   WorkspaceSetting @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  usuarioId   String
+  usuario     User     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  chatId      BigInt
+  apodo       String?
+  activo      Boolean  @default(true)
+  ultimoUso   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pagos Pago[]
+
+  @@unique([workspaceId, chatId])
+  @@index([usuarioId])
+  @@map("telegram_chats")
+}
+
+/// Código corto (6 dígitos, 10 min, un uso) para vincular Telegram desde la app.
+/// Solo lo genera quien tiene permiso de registro; el bot lo canjea con /vincular.
+model CodigoVinculacion {
+  id          String    @id @default(cuid())
+  codigo      String    @unique
+  workspaceId String
+  workspace   WorkspaceSetting @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creadoPorId String
+  creadoPor   User      @relation("CodigoCreador", fields: [creadoPorId], references: [id], onDelete: Cascade)
+  expiraEn    DateTime
+  usadoEn     DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+  @@map("codigos_vinculacion")
 }

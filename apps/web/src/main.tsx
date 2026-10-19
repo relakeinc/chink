@@ -12,6 +12,7 @@ import Inicio from "@/pages/Inicio";
 import Inventario from "@/pages/Inventario";
 import Movimientos from "@/pages/Movimientos";
 import Almacenes from "@/pages/Almacenes";
+import Pagos from "@/pages/Pagos";
 import Reportes from "@/pages/Reportes";
 import Equipo from "@/pages/Equipo";
 import Configuracion from "@/pages/Configuracion";
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
           { path: "inventario", element: <Inventario /> },
           { path: "movimientos", element: <Movimientos /> },
           { path: "almacenes", element: <Almacenes /> },
+        { path: "pagos", element: <Pagos /> },
           { path: "reportes", element: <Reportes /> },
           { path: "equipo", element: <Equipo /> },
           { path: "configuracion", element: <Configuracion /> },
