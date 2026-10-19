@@ -147,7 +147,10 @@ Notas:
   el frontend lo retiene en **`/activar`** (bloqueo total vía `RequireAuth`)
   hasta fijar una contraseña ≥ 8 y distinta. Al activar pasa a `ACTIVE`.
 - Reenviar invitación regenera la temporal y renueva la fecha.
-- Sin registro público: las cuentas nacen solo por invitación de un admin.
+- Registro público (`/registro`): crea cuenta `ACTIVE` como administradora de
+  su **propio espacio nuevo y vacío**. Cada cuenta ve solo los datos de su
+  espacio (`workspaceId` en usuarios, ajustes, almacenes, productos y
+  movimientos); los invitados heredan el espacio del equipo que los invita.
 
 ## 8. Frontend
 

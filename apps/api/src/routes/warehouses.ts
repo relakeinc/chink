@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
+import { workspaceIdFor } from "../lib/workspace-scope.js";
 
 const createBodySchema = {
   type: "object",
@@ -14,12 +15,13 @@ const createBodySchema = {
 } as const;
 
 export const warehouseRoutes: FastifyPluginAsync = async (app) => {
-  /** Alta de almacén. El código debe ser único. */
+  /** Alta de almacén. El código debe ser único dentro del espacio. */
   app.post("/", { schema: { body: createBodySchema } }, async (request, reply) => {
     const body = request.body as { code: string; name: string; location: string; address?: string; capacity: number };
 
     try {
-      const max = await prisma.warehouse.aggregate({ _max: { position: true } });
+      const ws = await workspaceIdFor(request);
+      const max = await prisma.warehouse.aggregate({ _max: { position: true }, where: { workspaceId: ws } });
       const created = await prisma.warehouse.create({
         data: {
           code: body.code.trim().toUpperCase(),
@@ -28,6 +30,7 @@ export const warehouseRoutes: FastifyPluginAsync = async (app) => {
           address: body.address?.trim() ?? "",
           capacity: body.capacity,
           position: (max._max.position ?? 0) + 1,
+          workspaceId: ws,
         },
       });
       return reply.status(201).send({
@@ -49,8 +52,10 @@ export const warehouseRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /** Almacenes con stock, capacidad y ocupación. */
-  app.get("/", async () => {
+  app.get("/", async (request) => {
+    const ws = await workspaceIdFor(request);
     const warehouses = await prisma.warehouse.findMany({
+      where: { workspaceId: ws },
       orderBy: { position: "asc" },
       include: {
         responsible: { select: { name: true } },
@@ -83,10 +88,11 @@ export const warehouseRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /** Existencias por ubicación: una fila por producto, una columna por almacén. */
-  app.get("/locations", async () => {
+  app.get("/locations", async (request) => {
+    const ws = await workspaceIdFor(request);
     const [warehouses, products] = await Promise.all([
-      prisma.warehouse.findMany({ orderBy: { position: "asc" } }),
-      prisma.product.findMany({ where: { archived: false }, orderBy: { position: "asc" }, include: { locations: true } }),
+      prisma.warehouse.findMany({ where: { workspaceId: ws }, orderBy: { position: "asc" } }),
+      prisma.product.findMany({ where: { archived: false, workspaceId: ws }, orderBy: { position: "asc" }, include: { locations: true } }),
     ]);
 
     return {
@@ -108,8 +114,9 @@ export const warehouseRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /** Totales de capacidad para la banda de KPIs. */
-  app.get("/summary", async () => {
-    const warehouses = await prisma.warehouse.findMany({ include: { locations: true } });
+  app.get("/summary", async (request) => {
+    const ws = await workspaceIdFor(request);
+    const warehouses = await prisma.warehouse.findMany({ where: { workspaceId: ws }, include: { locations: true } });
     const stock = warehouses.reduce((acc, w) => acc + w.locations.reduce((s, l) => s + l.quantity, 0), 0);
     const capacity = warehouses.reduce((acc, w) => acc + w.capacity, 0);
 

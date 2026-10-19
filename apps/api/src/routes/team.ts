@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { emailAssets, invitationEmail, invitationExistingEmail, sendEmail } from "../lib/email.js";
+import { workspaceIdFor } from "../lib/workspace-scope.js";
 
 const inviteBodySchema = {
   type: "object",
@@ -18,9 +19,10 @@ const inviteBodySchema = {
 async function sendInvitationEmail(
   log: { warn: (obj: unknown, msg: string) => void },
   input: { to: string; name: string; role: string; temporaryPassword: string; resent?: boolean },
+  workspaceId: string,
 ): Promise<boolean> {
   try {
-    const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true, spaceMark: true } });
+    const space = await prisma.workspaceSetting.findUnique({ where: { id: workspaceId }, select: { spaceName: true, spaceMark: true } });
     const content = invitationEmail({ ...input, mark: space?.spaceMark ?? "workspace-mark", spaceName: space?.spaceName ?? "Chink" });
     await sendEmail({ category: "invitations", to: input.to, subject: content.subject, html: content.html, text: content.text, attachments: emailAssets(space?.spaceMark).attachments });
     return true;
@@ -34,9 +36,10 @@ async function sendInvitationEmail(
 async function sendMemberNoticeEmail(
   log: { warn: (obj: unknown, msg: string) => void },
   input: { to: string; name: string; role: string },
+  workspaceId: string,
 ): Promise<boolean> {
   try {
-    const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true, spaceMark: true } });
+    const space = await prisma.workspaceSetting.findUnique({ where: { id: workspaceId }, select: { spaceName: true, spaceMark: true } });
     const content = invitationExistingEmail({ ...input, mark: space?.spaceMark ?? "workspace-mark", spaceName: space?.spaceName ?? "Chink" });
     await sendEmail({ category: "invitations", to: input.to, subject: content.subject, html: content.html, text: content.text, attachments: emailAssets(space?.spaceMark).attachments });
     return true;
@@ -60,6 +63,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
     };
 
     const email = body.email.trim().toLowerCase();
+    const ws = await workspaceIdFor(request);
 
     const role = await prisma.role.findUnique({ where: { id: body.roleId } });
     if (!role) return reply.status(400).send({ error: "Rol no válido" });
@@ -78,12 +82,21 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
             to: email,
             name: existing.name,
             role: role.name,
-          }),
+          }, ws),
         },
       };
     }
 
+    // Los almacenes asignados deben pertenecer al espacio que invita.
+    if (body.warehouseIds?.length) {
+      const sites = await prisma.warehouse.findMany({ where: { id: { in: body.warehouseIds }, workspaceId: ws }, select: { id: true } });
+      if (sites.length !== body.warehouseIds.length) {
+        return reply.status(400).send({ error: "Uno o varios almacenes no pertenecen a tu espacio" });
+      }
+    }
+
     // Contraseña temporal: la cuenta queda pendiente hasta activarla.
+    // El invitado hereda el espacio del equipo que lo invita.
     const temporaryPassword = crypto.randomUUID().slice(0, 8);
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
@@ -102,6 +115,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
         passwordHash,
         roleId: role.id,
         status: "PENDING",
+        workspaceId: ws,
         invitedAt: new Date(),
         warehouses: body.warehouseIds?.length
           ? { create: body.warehouseIds.map((warehouseId) => ({ warehouseId })) }
@@ -121,7 +135,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
           name: body.name.trim(),
           role: role.name,
           temporaryPassword,
-        }),
+        }, ws),
       },
     });
   });
@@ -132,7 +146,8 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
    * entrega al administrador para compartirla por su canal habitual.
    */
   app.post<{ Params: { id: string } }>("/invitations/:id/resend", { preHandler: app.requirePermission("admin") }, async (request, reply) => {
-    const member = await prisma.user.findUnique({ where: { id: request.params.id } });
+    const ws = await workspaceIdFor(request);
+    const member = await prisma.user.findFirst({ where: { id: request.params.id, workspaceId: ws } });
     if (!member) return reply.status(404).send({ error: "Miembro no encontrado" });
     if (member.status !== "PENDING") return reply.status(400).send({ error: "Solo se reenvían invitaciones pendientes" });
 
@@ -153,32 +168,37 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
           role: (await prisma.role.findUnique({ where: { id: member.roleId }, select: { name: true } }))?.name ?? "",
           temporaryPassword,
           resent: true,
-        }),
+        }, ws),
       },
     };
   });
 
   /** Matriz de roles y permisos. */
 
-  /** Directorio de miembros con su rol, almacenes y último acceso. */
+  /** Directorio de miembros del espacio con su rol, almacenes y último acceso. */
   app.get("/members", async (request) => {
     const query = request.query as { search?: string; warehouse?: string };
     const search = query.search?.trim().toLowerCase();
     const warehouse = query.warehouse?.trim();
+    const ws = await workspaceIdFor(request);
 
-    const members = await prisma.user.findMany({
-      where: {
-        ...(search
-          ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { email: { contains: search, mode: "insensitive" } }] }
-          : {}),
-        ...(warehouse ? { warehouses: { some: { warehouse: { code: warehouse } } } } : {}),
-      },
-      include: {
-        role: true,
-        warehouses: { include: { warehouse: true } },
-      },
-      orderBy: [{ status: "asc" }, { name: "asc" }],
-    });
+    const [members, siteCount] = await Promise.all([
+      prisma.user.findMany({
+        where: {
+          workspaceId: ws,
+          ...(search
+            ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { email: { contains: search, mode: "insensitive" } }] }
+            : {}),
+          ...(warehouse ? { warehouses: { some: { warehouse: { code: warehouse, workspaceId: ws } } } } : {}),
+        },
+        include: {
+          role: true,
+          warehouses: { include: { warehouse: true } },
+        },
+        orderBy: [{ status: "asc" }, { name: "asc" }],
+      }),
+      prisma.warehouse.count({ where: { workspaceId: ws } }),
+    ]);
 
     const meId = request.user.id;
 
@@ -191,7 +211,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
         initials: member.initials,
         role: member.role.name,
         warehouses:
-          member.warehouses.length === 3
+          member.warehouses.length === siteCount && siteCount > 0
             ? "Todos los almacenes"
             : member.warehouses
                 .map((entry) => entry.warehouse.name.replace("Almacén ", "").replace("Centro logístico ", ""))
@@ -210,17 +230,15 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /** Matriz de roles y permisos. */
-  app.get("/permissions", async () => {
+  app.get("/permissions", async (request) => {
+    const ws = await workspaceIdFor(request);
     const [roles, permissions, matrix] = await Promise.all([
-      prisma.role.findMany({
-        include: { _count: { select: { users: true } }, users: { select: { status: true } } },
-        orderBy: { id: "asc" },
-      }),
+      prisma.role.findMany({ select: { id: true, name: true }, orderBy: { id: "asc" } }),
       prisma.permission.findMany({ orderBy: { order: "asc" } }),
       prisma.rolePermission.findMany(),
     ]);
 
-    const counts = await prisma.user.groupBy({ by: ["roleId", "status"], _count: true });
+    const counts = await prisma.user.groupBy({ by: ["roleId", "status"], _count: true, where: { workspaceId: ws } });
 
     return {
       roles: roles.map((role) => {
@@ -239,7 +257,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  /** Actualiza el rol de un miembro. */
+  /** Actualiza el rol de un miembro del espacio. */
   app.patch<{ Params: { id: string } }>(
     "/members/:id",
     { preHandler: app.requirePermission("admin") },
@@ -247,7 +265,8 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
       const { roleId } = request.body as { roleId?: string };
       if (!roleId) return reply.status(400).send({ error: "Falta roleId" });
 
-      const member = await prisma.user.findUnique({ where: { id: request.params.id } });
+      const ws = await workspaceIdFor(request);
+      const member = await prisma.user.findFirst({ where: { id: request.params.id, workspaceId: ws } });
       if (!member) return reply.status(404).send({ error: "Miembro no encontrado" });
       if (member.id === request.user.id) return reply.status(400).send({ error: "No puedes cambiarte el rol a ti mismo" });
 

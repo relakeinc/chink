@@ -45,6 +45,8 @@ model User {
   roleId       String
   role         Role         @relation(fields: [roleId], references: [id])
   status       MemberStatus @default(ACTIVE)
+  /// Espacio de trabajo al que pertenece: propio al registrarse o el del equipo que invita.
+  workspaceId  String
   invitedAt    DateTime?
   lastAccessAt DateTime?
   createdAt    DateTime     @default(now())
@@ -55,6 +57,7 @@ model User {
   ownedWarehouses   Warehouse[]      @relation("WarehouseOwner")
   settingsUpdates   WorkspaceSetting[]
 
+  @@index([workspaceId])
   @@map("users")
 }
 
@@ -107,7 +110,8 @@ model UserWarehouse {
 
 model Warehouse {
   id           String  @id @default(cuid())
-  code         String  @unique
+  /// Código único dentro de cada espacio (cada cuenta tiene su propia serie).
+  code         String
   name         String
   location     String
   address      String
@@ -115,6 +119,8 @@ model Warehouse {
   active       Boolean @default(true)
   position     Int     @default(0)
   responsibleId String?
+  /// Espacio dueño del almacén.
+  workspaceId  String
 
   responsible User?           @relation("WarehouseOwner", fields: [responsibleId], references: [id], onDelete: SetNull)
   locations   StockLocation[]
@@ -125,12 +131,15 @@ model Warehouse {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([workspaceId, code])
+  @@index([workspaceId])
   @@map("warehouses")
 }
 
 model Product {
   id         String        @id @default(cuid())
-  sku        String        @unique
+  /// SKU único dentro de cada espacio.
+  sku        String
   name       String
   category   String
   stock      Int           @default(0)
@@ -147,6 +156,8 @@ model Product {
   imageKey   String?
   imageUrl   String?
   minStock   Int           @default(0)
+  /// Espacio dueño del producto.
+  workspaceId String
 
   locations StockLocation[]
   movements StockMovement[]
@@ -157,6 +168,8 @@ model Product {
   @@index([category])
   @@index([status])
   @@index([archived])
+  @@unique([workspaceId, sku])
+  @@index([workspaceId])
   @@map("products")
 }
 
@@ -178,16 +191,19 @@ model StockLocation {
 
 model StockMovement {
   id            String         @id @default(cuid())
-  ref           String         @unique
+  /// Referencia correlativa dentro de cada espacio (MOV-001…).
+  ref           String
   type          MovementType
   status        MovementStatus @default(CONFIRMED)
   quantity      Int
   note          String?
   productId     String
-  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   originId      String?
   destinationId String?
   ownerId       String
+  /// Espacio dueño del movimiento.
+  workspaceId   String
   createdAt     DateTime       @default(now())
 
   origin      Warehouse? @relation("MovementOrigin", fields: [originId], references: [id], onDelete: SetNull)
@@ -196,14 +212,17 @@ model StockMovement {
 
   @@index([productId])
   @@index([type])
+  @@unique([workspaceId, ref])
+  @@index([workspaceId])
   @@map("stock_movements")
 }
 
 // ----------------------------------------------------------- Configuración
 
-/// Preferencias del espacio de trabajo. Es un singleton con id fijo.
+/// Preferencias de cada espacio de trabajo. Hay una fila por espacio y su
+/// id ES el workspaceId (la fila "default" es el espacio original).
 model WorkspaceSetting {
-  id           String @id @default("default")
+  id           String @id
   spaceName    String
   /// Color del avatar del espacio, en hexadecimal (se elige en Configuración).
   spaceColor   String @default("#242722")

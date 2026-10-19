@@ -8,7 +8,7 @@ import AuthSplit from "@/components/layout/AuthSplit";
 const fieldClass =
   "h-[38px] rounded-[6px] border border-edge bg-canvas px-[12px] text-[12px] text-ink outline-none focus:border-ink";
 
-/** Registro público: crea cuenta ACTIVA con rol Consulta. Sin invitaciones. */
+/** Registro público: crea cuenta ACTIVA como admin de su propio espacio privado. */
 export default function Registro() {
   const { user, refresh } = useAuth();
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ export default function Registro() {
   return (
     <AuthSplit
       title="Crea tu cuenta"
-      description="Empieza a consultar tu inventario en segundos, sin invitaciones."
+      description="Tu propio espacio privado en segundos. Solo quien invite tu equipo verá tus datos."
       asideCta={{ label: "Entrar", to: "/login" }}
     >
       <form onSubmit={submit} className="flex flex-col gap-[14px] rounded-[10px] bg-subtle p-[24px]">

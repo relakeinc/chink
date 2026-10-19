@@ -173,6 +173,7 @@ async function main() {
             passwordHash,
             roleId: role.id,
             status: user.status,
+            workspaceId: "default",
             invitedAt: user.invitedAt ? new Date(user.invitedAt) : null,
             lastAccessAt: user.lastAccessAt ? new Date(user.lastAccessAt) : null,
           },
@@ -197,6 +198,7 @@ async function main() {
             capacity: warehouse.capacity,
             position: warehouse.position,
             responsibleId: responsible.id,
+            workspaceId: "default",
           },
         });
         return [warehouse.code, created];
@@ -235,6 +237,7 @@ async function main() {
         position: index + 1,
         icon: product.icon,
         minStock: product.minStock,
+        workspaceId: "default",
       },
     });
 
@@ -255,7 +258,7 @@ async function main() {
 
   // --- Historial de movimientos
   for (const movement of MOVEMENTS) {
-    const product = await prisma.product.findUnique({ where: { sku: movement.product } });
+    const product = await prisma.product.findFirst({ where: { sku: movement.product, workspaceId: "default" } });
     const owner = users[movement.owner];
     if (!product || !owner) throw new Error(`Datos incompletos en ${movement.ref}`);
     await prisma.stockMovement.create({
@@ -269,6 +272,7 @@ async function main() {
         originId: movement.origin ? warehouses[movement.origin]?.id : undefined,
         destinationId: movement.destination ? warehouses[movement.destination]?.id : undefined,
         ownerId: owner.id,
+        workspaceId: "default",
         createdAt: new Date(movement.createdAt),
       },
     });

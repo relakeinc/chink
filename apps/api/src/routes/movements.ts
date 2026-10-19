@@ -3,6 +3,7 @@ import type { MovementType } from "@chink-saas/db";
 import type { Prisma } from "@chink-saas/db";
 import { prisma } from "@chink-saas/db";
 import { emailAssets, lowStockEmail, sendEmail } from "../lib/email.js";
+import { workspaceIdFor } from "../lib/workspace-scope.js";
 
 const TYPE_LABEL: Record<MovementType, string> = {
   ENTRY: "Entrada",
@@ -62,9 +63,9 @@ function rangeFilter(from?: string, to?: string): Prisma.StockMovementWhereInput
   };
 }
 
-/** Siguiente referencia correlativa: MOV-012 -> MOV-013. */
-async function nextRef() {
-  const last = await prisma.stockMovement.findFirst({ orderBy: { ref: "desc" }, select: { ref: true } });
+/** Siguiente referencia correlativa dentro del espacio: MOV-012 -> MOV-013. */
+async function nextRef(workspaceId: string) {
+  const last = await prisma.stockMovement.findFirst({ where: { workspaceId }, orderBy: { ref: "desc" }, select: { ref: true } });
   const current = Number(last?.ref.replace(/\D/g, "") ?? "0");
   return `MOV-${String(current + 1).padStart(3, "0")}`;
 }
@@ -82,17 +83,25 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
       note?: string;
     };
 
-    const product = await prisma.product.findUnique({
-      where: { id: body.productId },
+    const product = await prisma.product.findFirst({
+      where: { id: body.productId, workspaceId: await workspaceIdFor(request) },
       include: { locations: true },
     });
     if (!product) return reply.status(404).send({ error: "Producto no encontrado" });
+    const ws = product.workspaceId;
 
     if (body.type === "TRANSFER" && !body.destinationId) {
       return reply.status(400).send({ error: "Una transferencia necesita un almacén de destino" });
     }
     if ((body.type === "ENTRY" || body.type === "EXIT" || body.type === "ADJUSTMENT") && !body.originId && body.type !== "ENTRY") {
       return reply.status(400).send({ error: "Indica el almacén afectado" });
+    }
+
+    // Los almacenes del movimiento deben pertenecer al espacio de la sesión.
+    for (const warehouseId of [body.originId, body.destinationId]) {
+      if (!warehouseId) continue;
+      const site = await prisma.warehouse.findFirst({ where: { id: warehouseId, workspaceId: ws }, select: { id: true } });
+      if (!site) return reply.status(400).send({ error: "Almacén no válido" });
     }
 
     // Deltas por almacén según el tipo. ENTRY suma en destino; EXIT resta en
@@ -114,7 +123,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
     for (const [warehouseId, delta] of deltas) {
       const current = product.locations.find((l) => l.warehouseId === warehouseId)?.quantity ?? 0;
       if (current + delta < 0) {
-        const warehouse = await prisma.warehouse.findUnique({ where: { id: warehouseId }, select: { name: true } });
+        const warehouse = await prisma.warehouse.findFirst({ where: { id: warehouseId, workspaceId: ws }, select: { name: true } });
         return reply.status(409).send({
           error: `No hay stock suficiente en ${warehouse?.name ?? "ese almacén"} (${current} u.)`,
         });
@@ -149,7 +158,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
 
       return tx.stockMovement.create({
         data: {
-          ref: await nextRef(),
+          ref: await nextRef(ws),
           type: body.type,
           status: "CONFIRMED",
           // Las transferencias no alteran el total: se guardan positivas.
@@ -159,6 +168,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
           originId: body.originId ?? null,
           destinationId: body.destinationId ?? null,
           ownerId: request.user.id,
+          workspaceId: ws,
         },
         include: { product: true, origin: true, destination: true },
       });
@@ -169,7 +179,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
     if (crossedBelow) {
       try {
         const prefs = await prisma.workspaceSetting.findUnique({
-          where: { id: "default" },
+          where: { id: ws },
           select: { notifyLowStock: true, contactEmail: true, spaceName: true, spaceMark: true },
         });
         if (prefs?.notifyLowStock && prefs.contactEmail) {
@@ -223,23 +233,26 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
 
     const search = query.search?.trim();
     const created = rangeFilter(query.from, query.to);
+    const ws = await workspaceIdFor(request);
+
+    // Los filtros opcionales se combinan en un único OR: antes el segundo
+    // machacaba al primero cuando venían almacén y búsqueda a la vez.
+    const ors: Prisma.StockMovementWhereInput[] = [];
+    if (query.warehouse) ors.push({ origin: { code: query.warehouse } }, { destination: { code: query.warehouse } });
+    if (search) {
+      ors.push(
+        { ref: { contains: search, mode: "insensitive" } },
+        { product: { name: { contains: search, mode: "insensitive" } } },
+        { product: { sku: { contains: search, mode: "insensitive" } } },
+      );
+    }
 
     const where: Prisma.StockMovementWhereInput = {
+      workspaceId: ws,
       ...(query.type ? { type: query.type } : {}),
       ...(query.owner ? { owner: { email: query.owner } } : {}),
       ...(created ?? {}),
-      ...(query.warehouse
-        ? { OR: [{ origin: { code: query.warehouse } }, { destination: { code: query.warehouse } }] }
-        : {}),
-      ...(search
-        ? {
-            OR: [
-              { ref: { contains: search, mode: "insensitive" } },
-              { product: { name: { contains: search, mode: "insensitive" } } },
-              { product: { sku: { contains: search, mode: "insensitive" } } },
-            ],
-          }
-        : {}),
+      ...(ors.length > 0 ? { OR: ors } : {}),
     };
 
     const [total, rows, typeCounts] = await Promise.all([
@@ -251,7 +264,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
         take: pageSize,
         include: { product: true, owner: true, origin: true, destination: true },
       }),
-      prisma.stockMovement.groupBy({ by: ["type"], _count: true, _sum: { quantity: true } }),
+      prisma.stockMovement.groupBy({ by: ["type"], _count: true, _sum: { quantity: true }, where: { workspaceId: ws } }),
     ]);
 
     return {
@@ -289,12 +302,13 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
   /** KPIs de la banda de resumen. */
   app.get("/summary", { schema: { querystring: rangeQuerySchema } }, async (request) => {
     const { from, to } = request.query as { from?: string; to?: string };
+    const ws = await workspaceIdFor(request);
     const created = rangeFilter(from, to);
     const groups = await prisma.stockMovement.groupBy({
       by: ["type"],
       _count: true,
       _sum: { quantity: true },
-      where: created,
+      where: { workspaceId: ws, ...created },
     });
 
     const pick = (type: MovementType) => {
@@ -314,10 +328,11 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
   /** Serie diaria de entradas y salidas para los gráficos. */
   app.get("/weekly", { schema: { querystring: rangeQuerySchema } }, async (request) => {
     const { from, to } = request.query as { from?: string; to?: string };
+    const ws = await workspaceIdFor(request);
     // Se traen todos los tipos para que los días sin entradas ni salidas
     // (p. ej. el 9 oct, que solo tiene una transferencia) aparezcan con 0.
     const rows = await prisma.stockMovement.findMany({
-      where: rangeFilter(from, to),
+      where: { workspaceId: ws, ...rangeFilter(from, to) },
       select: { type: true, quantity: true, createdAt: true },
     });
 

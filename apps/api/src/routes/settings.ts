@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
+import { workspaceIdFor } from "../lib/workspace-scope.js";
 
 const body = {
   type: "object",
@@ -50,11 +51,12 @@ const WORKSPACE_MARKS = [
 ];
 
 export const settingRoutes: FastifyPluginAsync = async (app) => {
-  /** Preferencias del espacio de trabajo. */
-  app.get("/", async () => {
+  /** Preferencias del espacio de trabajo propio. */
+  app.get("/", async (request) => {
+    const ws = await workspaceIdFor(request);
     const [settings, warehouses] = await Promise.all([
-      prisma.workspaceSetting.findUnique({ where: { id: "default" }, include: { updatedBy: { select: { name: true } } } }),
-      prisma.warehouse.findMany({ orderBy: { position: "asc" } }),
+      prisma.workspaceSetting.findUnique({ where: { id: ws }, include: { updatedBy: { select: { name: true } } } }),
+      prisma.warehouse.findMany({ where: { workspaceId: ws }, orderBy: { position: "asc" } }),
     ]);
 
     if (!settings) return { data: null, options, warehouses: [] };
@@ -95,7 +97,8 @@ export const settingRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.patch("/", { schema: { body } }, async (request, reply) => {
-    const current = await prisma.workspaceSetting.findUnique({ where: { id: "default" } });
+    const ws = await workspaceIdFor(request);
+    const current = await prisma.workspaceSetting.findUnique({ where: { id: ws } });
     if (!current) return reply.status(404).send({ error: "Preferencias no inicializadas" });
 
     const data = request.body as Record<string, unknown>;
@@ -112,7 +115,7 @@ export const settingRoutes: FastifyPluginAsync = async (app) => {
       if (data[key] !== undefined) update[key] = data[key];
     }
 
-    const settings = await prisma.workspaceSetting.update({ where: { id: "default" }, data: update });
+    const settings = await prisma.workspaceSetting.update({ where: { id: ws }, data: update });
 
     return {
       data: {

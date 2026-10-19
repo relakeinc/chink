@@ -44,6 +44,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       initials: user.initials,
       role: user.role.name,
       status: user.status,
+      workspaceId: user.workspaceId,
     };
 
     return {
@@ -55,8 +56,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /**
-   * Registro público: crea la cuenta ACTIVA con el rol más básico (Consulta).
-   * Sin invitaciones: cualquiera con el enlace puede entrar a consultar.
+   * Registro público: crea una cuenta ACTIVA como administradora de SU PROPIO
+   * espacio nuevo y vacío. Nadie pisa datos ajenos: solo quien sea invitado al
+   * equipo de un espacio ve los datos de ese espacio.
    */
   app.post(
     "/register",
@@ -82,7 +84,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
       if (existing) return reply.status(409).send({ error: "Ese correo ya tiene cuenta. Inicia sesión." });
 
-      const role = await prisma.role.findFirst({ where: { name: "Consulta" } });
+      const role = await prisma.role.findFirst({ where: { name: "Administradora" } });
       if (!role) return reply.status(500).send({ error: "Roles sin inicializar" });
 
       const initials = name
@@ -92,6 +94,27 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         .map((part) => part[0]?.toUpperCase() ?? "")
         .join("");
 
+      const workspaceId = crypto.randomUUID();
+
+      await prisma.workspaceSetting.create({
+        data: {
+          id: workspaceId,
+          spaceName: "Mi espacio",
+          spaceColor: "#242722",
+          spaceMark: "workspace-mark",
+          legalName: "",
+          contactEmail: cleanEmail,
+          taxId: "",
+          language: "Español (España)",
+          currency: "Peso colombiano · COP ($)",
+          timezone: "America / Bogota (UTC-05:00)",
+          dateFormat: "DD/MM/AAAA",
+          unit: "Unidad (u.)",
+          movementPrefix: "MOV-",
+          defaultMinStock: 10,
+        },
+      });
+
       const created = await prisma.user.create({
         data: {
           email: cleanEmail,
@@ -100,6 +123,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           passwordHash: await bcrypt.hash(password, 10),
           roleId: role.id,
           status: "ACTIVE",
+          workspaceId,
           lastAccessAt: new Date(),
         },
         include: { role: { include: { permissions: { include: { permission: true } } } } },
@@ -112,6 +136,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         initials: created.initials,
         role: created.role.name,
         status: created.status,
+        workspaceId: created.workspaceId,
       };
 
       return reply.status(201).send({
@@ -154,7 +179,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
       // Confirmación accesoria: si el correo falla, el cambio ya quedó.
       try {
-        const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true, spaceMark: true } });
+        const space = await prisma.workspaceSetting.findUnique({ where: { id: user.workspaceId }, select: { spaceName: true, spaceMark: true } });
         const content = passwordChangedEmail({ name: user.name, spaceName: space?.spaceName ?? "Chink", mark: space?.spaceMark ?? "workspace-mark" });
         await sendEmail({ category: "verification", to: user.email, subject: content.subject, html: content.html, text: content.text, attachments: emailAssets(space?.spaceMark).attachments });
       } catch (error) {
@@ -212,6 +237,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         initials: updated.initials,
         role: updated.role.name,
         status: updated.status,
+        workspaceId: updated.workspaceId,
       };
 
       return {

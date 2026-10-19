@@ -2,16 +2,18 @@ import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { emailAssets, reportEmail, sendEmail } from "../lib/email.js";
 import { buildReportPdf } from "../lib/report-pdf.js";
+import { workspaceIdFor } from "../lib/workspace-scope.js";
 
 const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
 export const reportRoutes: FastifyPluginAsync = async (app) => {
   /** KPIs de la cabecera de Reportes. */
-  app.get("/summary", async () => {
+  app.get("/summary", async (request) => {
+    const ws = await workspaceIdFor(request);
     const [totals, groups, latest] = await Promise.all([
-      prisma.product.aggregate({ _sum: { stock: true, reserved: true, totalValue: true }, where: { archived: false } }),
-      prisma.stockMovement.groupBy({ by: ["type"], _count: true, _sum: { quantity: true } }),
-      prisma.stockMovement.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
+      prisma.product.aggregate({ _sum: { stock: true, reserved: true, totalValue: true }, where: { archived: false, workspaceId: ws } }),
+      prisma.stockMovement.groupBy({ by: ["type"], _count: true, _sum: { quantity: true }, where: { workspaceId: ws } }),
+      prisma.stockMovement.findFirst({ where: { workspaceId: ws }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
     ]);
 
     const sum = (type: "ENTRY" | "EXIT" | "ADJUSTMENT") =>
@@ -33,15 +35,16 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
       netPercent: opening > 0 ? (net / opening) * 100 : 0,
       opening,
       adjustments,
-      lowStock: await prisma.product.count({ where: { status: "LOW_STOCK", archived: false } }),
-      lowStockUnits: await prisma.product.aggregate({ _sum: { stock: true }, where: { status: "LOW_STOCK", archived: false } }),
-      totalProducts: await prisma.product.count({ where: { archived: false } }),
+      lowStock: await prisma.product.count({ where: { status: "LOW_STOCK", archived: false, workspaceId: ws } }),
+      lowStockUnits: await prisma.product.aggregate({ _sum: { stock: true }, where: { status: "LOW_STOCK", archived: false, workspaceId: ws } }),
+      totalProducts: await prisma.product.count({ where: { archived: false, workspaceId: ws } }),
     };
   });
 
   /** Distribución de unidades por categoría. */
-  app.get("/categories", async () => {
-    const products = await prisma.product.findMany({ where: { archived: false }, select: { category: true, stock: true } });
+  app.get("/categories", async (request) => {
+    const ws = await workspaceIdFor(request);
+    const products = await prisma.product.findMany({ where: { archived: false, workspaceId: ws }, select: { category: true, stock: true } });
     const total = products.reduce((acc, p) => acc + p.stock, 0);
 
     const map = new Map<string, { units: number; products: number }>();
@@ -69,25 +72,27 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /** Referencias por debajo del mínimo. */
-  app.get("/low-stock", async () => {
+  app.get("/low-stock", async (request) => {
+    const ws = await workspaceIdFor(request);
     const products = await prisma.product.findMany({
-      where: { status: "LOW_STOCK", archived: false },
+      where: { status: "LOW_STOCK", archived: false, workspaceId: ws },
       orderBy: { position: "asc" },
     });
     return { data: products.map((p) => ({ name: p.name, sku: p.sku, minStock: p.minStock, stock: p.stock, imageUrl: p.imageUrl })) };
   });
 
   /** Reportes exportables. */
-  app.get("/exports", async (request) => {    const [totals, movements, lowStock, warehouses] = await Promise.all([
-      prisma.product.aggregate({ _sum: { stock: true }, where: { archived: false } }),
-      prisma.stockMovement.count(),
-      prisma.product.count({ where: { status: "LOW_STOCK", archived: false } }),
-      prisma.warehouse.count({ where: { active: true } }),
+  app.get("/exports", async (request) => {    const ws = await workspaceIdFor(request);
+    const [totals, movements, lowStock, warehouses] = await Promise.all([
+      prisma.product.aggregate({ _sum: { stock: true }, where: { archived: false, workspaceId: ws } }),
+      prisma.stockMovement.count({ where: { workspaceId: ws } }),
+      prisma.product.count({ where: { status: "LOW_STOCK", archived: false, workspaceId: ws } }),
+      prisma.warehouse.count({ where: { active: true, workspaceId: ws } }),
     ]);
 
     const now = new Date();
     const stamp = `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    const productCount = await prisma.product.count({ where: { archived: false } });
+    const productCount = await prisma.product.count({ where: { archived: false, workspaceId: ws } });
 
     return {
       data: [
@@ -123,14 +128,15 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(400).send({ error: "El correo no parece válido" });
       }
 
+      const ws = await workspaceIdFor(request);
       const [totals, movements, lowStock, warehouses, productCount] = await Promise.all([
-        prisma.product.aggregate({ _sum: { stock: true }, where: { archived: false } }),
-        prisma.stockMovement.count(),
-        prisma.product.count({ where: { status: "LOW_STOCK", archived: false } }),
-        prisma.warehouse.count({ where: { active: true } }),
-        prisma.product.count({ where: { archived: false } }),
+        prisma.product.aggregate({ _sum: { stock: true }, where: { archived: false, workspaceId: ws } }),
+        prisma.stockMovement.count({ where: { workspaceId: ws } }),
+        prisma.product.count({ where: { status: "LOW_STOCK", archived: false, workspaceId: ws } }),
+        prisma.warehouse.count({ where: { active: true, workspaceId: ws } }),
+        prisma.product.count({ where: { archived: false, workspaceId: ws } }),
       ]);
-      const space = await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { spaceName: true, spaceMark: true } });
+      const space = await prisma.workspaceSetting.findUnique({ where: { id: ws }, select: { spaceName: true, spaceMark: true } });
 
       const catalog: Record<string, { scope: string; content: string }> = {
         "Inventario actual": {
@@ -148,7 +154,7 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
       const now = new Date();
       const cutoff = `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
       const spaceName = space?.spaceName ?? "Chink";
-      const detail = await buildReportDetail(name);
+      const detail = await buildReportDetail(name, ws);
       const pdf = await buildReportPdf({
         title: name,
         spaceName,
@@ -182,12 +188,13 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
  * Filas de detalle por reporte (qué, cuándo, dónde): lo que el correo resume,
  * el PDF lo lista.
  */
-async function buildReportDetail(name: string): Promise<{ headers: string[]; widths: number[]; rows: string[][] }> {
+async function buildReportDetail(name: string, workspaceId: string): Promise<{ headers: string[]; widths: number[]; rows: string[][] }> {
   const fmtInt = (value: number) => value.toLocaleString("es-CO");
   const fmtMoney = (value: number) => `$${value.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   if (name === "Historial de movimientos") {
     const rows = await prisma.stockMovement.findMany({
+      where: { workspaceId },
       orderBy: { createdAt: "desc" },
       take: 200,
       include: { product: { select: { name: true, sku: true } }, origin: { select: { name: true } }, destination: { select: { name: true } }, owner: { select: { name: true } } },
@@ -210,7 +217,7 @@ async function buildReportDetail(name: string): Promise<{ headers: string[]; wid
   }
 
   if (name === "Productos con stock bajo") {
-    const rows = await prisma.product.findMany({ where: { status: "LOW_STOCK", archived: false }, orderBy: { position: "asc" } });
+    const rows = await prisma.product.findMany({ where: { status: "LOW_STOCK", archived: false, workspaceId }, orderBy: { position: "asc" } });
     return {
       headers: ["Producto", "SKU", "Mínimo", "Stock", "Faltante"],
       widths: [170, 90, 70, 70, 70],
@@ -219,7 +226,7 @@ async function buildReportDetail(name: string): Promise<{ headers: string[]; wid
   }
 
   if (name === "Existencias por almacén") {
-    const rows = await prisma.warehouse.findMany({ orderBy: { position: "asc" }, include: { locations: true } });
+    const rows = await prisma.warehouse.findMany({ where: { workspaceId }, orderBy: { position: "asc" }, include: { locations: true } });
     return {
       headers: ["Código", "Almacén", "Unidades", "Productos", "Ocupación"],
       widths: [70, 150, 70, 70, 80],
@@ -234,7 +241,7 @@ async function buildReportDetail(name: string): Promise<{ headers: string[]; wid
 
   // "Inventario actual" (y cualquier otro): catálogo completo.
   const rows = await prisma.product.findMany({
-    where: { archived: false },
+    where: { archived: false, workspaceId },
     orderBy: { position: "asc" },
     include: { locations: { include: { warehouse: true } } },
   });

@@ -9,6 +9,8 @@ export interface SessionUser {
   initials: string;
   role: string;
   status: string;
+  /** Espacio del usuario. Opcional: los tokens emitidos antes de espacios no lo traen. */
+  workspaceId?: string;
 }
 
 declare module "@fastify/jwt" {

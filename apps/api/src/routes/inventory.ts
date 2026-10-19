@@ -9,6 +9,7 @@ import {
   getR2Config,
   publicUrlFor,
 } from "../lib/r2.js";
+import { workspaceIdFor } from "../lib/workspace-scope.js";
 
 /** Vistas disponibles en las pestañas del catálogo. */
 const VIEWS = ["all", "low", "archived"] as const;
@@ -113,9 +114,9 @@ function sendR2Error(reply: FastifyReply, error: unknown) {
   return reply.status(400).send({ error: message });
 }
 
-function buildWhere(query: ListQuery): Prisma.ProductWhereInput {
+function buildWhere(query: ListQuery, workspaceId: string): Prisma.ProductWhereInput {
   const view = query.view ?? "all";
-  const where: Prisma.ProductWhereInput = {};
+  const where: Prisma.ProductWhereInput = { workspaceId };
 
   if (view === "archived") {
     where.archived = true;
@@ -135,7 +136,7 @@ function buildWhere(query: ListQuery): Prisma.ProductWhereInput {
   }
 
   if (query.category) where.category = query.category;
-  if (query.warehouse) where.locations = { some: { warehouse: { code: query.warehouse } } };
+  if (query.warehouse) where.locations = { some: { warehouse: { code: query.warehouse, workspaceId } } };
 
   return where;
 }
@@ -161,21 +162,23 @@ const LOCATIONS = {
 
 export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   /** KPI de la cabecera + contadores de las pestañas. */
-  app.get("/summary", async () => {
+  app.get("/summary", async (request) => {
+    const ws = await workspaceIdFor(request);
     const [totals, lowStock, inStock, archived, categories, warehouses] = await Promise.all([
       prisma.product.aggregate({
         _sum: { stock: true, reserved: true, totalValue: true },
-        where: { archived: false },
+        where: { archived: false, workspaceId: ws },
       }),
-      prisma.product.count({ where: { status: "LOW_STOCK", archived: false } }),
-      prisma.product.count({ where: { status: "IN_STOCK", archived: false } }),
-      prisma.product.count({ where: { archived: true } }),
+      prisma.product.count({ where: { status: "LOW_STOCK", archived: false, workspaceId: ws } }),
+      prisma.product.count({ where: { status: "IN_STOCK", archived: false, workspaceId: ws } }),
+      prisma.product.count({ where: { archived: true, workspaceId: ws } }),
       prisma.product.findMany({
         distinct: ["category"],
+        where: { workspaceId: ws },
         select: { category: true },
         orderBy: { category: "asc" },
       }),
-      prisma.warehouse.findMany({ select: { id: true, name: true, code: true }, orderBy: { position: "asc" } }),
+      prisma.warehouse.findMany({ where: { workspaceId: ws }, select: { id: true, name: true, code: true }, orderBy: { position: "asc" } }),
     ]);
 
     const totalStock = totals._sum.stock ?? 0;
@@ -195,7 +198,8 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
   /** Listado paginado y filtrado del catálogo. */
   app.get("/products", { schema: { querystring: listQuerySchema } }, async (request) => {
     const query = request.query as ListQuery;
-    const where = buildWhere(query);
+    const ws = await workspaceIdFor(request);
+    const where = buildWhere(query, ws);
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
 
@@ -222,7 +226,8 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
   });
 
   app.get<{ Params: { id: string } }>("/products/:id", async (request, reply) => {
-    const product = await prisma.product.findUnique({ where: { id: request.params.id }, include: LOCATIONS });
+    const ws = await workspaceIdFor(request);
+    const product = await prisma.product.findFirst({ where: { id: request.params.id, workspaceId: ws }, include: LOCATIONS });
     if (!product) return reply.status(404).send({ error: "Producto no encontrado" });
     return { data: toProductDto(product) };
   });
@@ -252,7 +257,8 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
 
     try {
       assertProductImageUpload(body.contentType, body.size);
-      const existing = await prisma.product.findMany({ where: { id: { in: body.productIds } }, select: { id: true } });
+      const ws = await workspaceIdFor(request);
+      const existing = await prisma.product.findMany({ where: { id: { in: body.productIds }, workspaceId: ws }, select: { id: true } });
       if (existing.length !== body.productIds.length) {
         return reply.status(404).send({ error: "Uno o varios productos no existen." });
       }
@@ -287,12 +293,19 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
     const totalValue = Number((body.stock * body.unitCost).toFixed(2));
     const status = body.status ?? (minStock > 0 && body.stock <= minStock ? "LOW_STOCK" : "IN_STOCK");
 
-    const warehouseId =
-      body.warehouseId ??
-      (await prisma.workspaceSetting.findUnique({ where: { id: "default" }, select: { defaultWarehouseId: true } }))?.defaultWarehouseId ??
-      null;
+    const ws = await workspaceIdFor(request);
 
-    const maxPosition = await prisma.product.aggregate({ _max: { position: true } });
+    let warehouseId: string | null = null;
+    if (body.warehouseId) {
+      const target = await prisma.warehouse.findFirst({ where: { id: body.warehouseId, workspaceId: ws }, select: { id: true } });
+      if (!target) return reply.status(400).send({ error: "Almacén no válido" });
+      warehouseId = target.id;
+    } else {
+      const prefs = await prisma.workspaceSetting.findUnique({ where: { id: ws }, select: { defaultWarehouseId: true } });
+      warehouseId = prefs?.defaultWarehouseId ?? null;
+    }
+
+    const maxPosition = await prisma.product.aggregate({ _max: { position: true }, where: { workspaceId: ws } });
 
     try {
       const created = await prisma.product.create({
@@ -308,6 +321,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
           status,
           icon: body.icon ?? "package",
           position: (maxPosition._max.position ?? 0) + 1,
+          workspaceId: ws,
           ...(warehouseId ? { locations: { create: { warehouseId, quantity: body.stock, reserved } } } : {}),
         },
         include: LOCATIONS,
@@ -333,7 +347,8 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       const config = getR2Config();
       const ids = body.items.map((item) => item?.id).filter((id): id is string => typeof id === "string");
       if (ids.length !== body.items.length) return reply.status(400).send({ error: "Cada imagen debe incluir el id del producto." });
-      const existing = await prisma.product.findMany({ where: { id: { in: ids } } });
+      const ws = await workspaceIdFor(request);
+      const existing = await prisma.product.findMany({ where: { id: { in: ids }, workspaceId: ws } });
       if (existing.length !== ids.length) return reply.status(404).send({ error: "Uno o varios productos no existen." });
       const previous = new Map(existing.map((product) => [product.id, product.imageKey]));
 
@@ -368,7 +383,8 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
   });
 
   app.patch<{ Params: { id: string } }>("/products/:id", async (request, reply) => {
-    const existing = await prisma.product.findUnique({ where: { id: request.params.id } });
+    const ws = await workspaceIdFor(request);
+    const existing = await prisma.product.findFirst({ where: { id: request.params.id, workspaceId: ws } });
     if (!existing) return reply.status(404).send({ error: "Producto no encontrado" });
 
     const body = (request.body ?? {}) as Partial<{
