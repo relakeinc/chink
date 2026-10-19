@@ -141,16 +141,20 @@ Notas:
 
 - Invitar (`Equipo → Invitar miembro`) crea al usuario en estado `PENDING`
   con clave temporal de 8 caracteres y manda el correo con la clave.
-- Si el correo **ya es miembro**, no se crea ni se cambia nada: responde
-  `alreadyMember: true` y solo le llega un aviso informativo.
+- Si el correo **ya tiene cuenta**, entra a tu espacio con el rol asignado sin
+  tocar su espacio propio: responde `addedToSpace: true` (o `alreadyMember`
+  si ya estaba) y recibe correo + aviso dentro de la app.
 - El invitado entra con su clave temporal; el login devuelve `mustActivate` y
   el frontend lo retiene en **`/activar`** (bloqueo total vía `RequireAuth`)
   hasta fijar una contraseña ≥ 8 y distinta. Al activar pasa a `ACTIVE`.
 - Reenviar invitación regenera la temporal y renueva la fecha.
 - Registro público (`/registro`): crea cuenta `ACTIVE` como administradora de
   su **propio espacio nuevo y vacío**. Cada cuenta ve solo los datos de su
-  espacio (`workspaceId` en usuarios, ajustes, almacenes, productos y
+  espacio activo (`workspaceId` en usuarios, ajustes, almacenes, productos y
   movimientos); los invitados heredan el espacio del equipo que los invita.
+- Multi-espacio: `space_members` (rol por espacio), conmutador en el menú del
+  espacio (`GET /team/spaces`, `PATCH /team/active-space` con sesión nueva) y
+  campana de notificaciones in-app (`/api/notifications`, sondeo cada 30 s).
 
 ## 8. Frontend
 

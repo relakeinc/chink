@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { emailAssets, passwordChangedEmail, sendEmail } from "../lib/email.js";
+import { membershipSession } from "../lib/workspace-scope.js";
 
 const loginBody = {
   type: "object",
@@ -13,13 +14,13 @@ const loginBody = {
 } as const;
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
-  /** Inicio de sesión. Devuelve el token y el perfil con sus permisos. */
+  /** Inicio de sesión. Devuelve el token y el perfil con sus permisos del espacio activo. */
   app.post("/login", { schema: { body: loginBody } }, async (request, reply) => {
     const { email, password } = request.body as { email: string; password: string };
 
     const user = await prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
+      select: { id: true, passwordHash: true },
     });
 
     // Ojo: `reply.send()` envía de inmediato, así que la respuesta se construye
@@ -31,26 +32,18 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return invalid();
 
+    const { session, permissions } = await membershipSession(user.id);
+
     // Un invitado PENDING entra con su clave temporal, pero marcado para
     // activar: el frontend lo retiene en /activar hasta que ponga su clave.
-    const mustActivate = user.status !== "ACTIVE";
+    const mustActivate = session.status !== "ACTIVE";
 
     await prisma.user.update({ where: { id: user.id }, data: { lastAccessAt: new Date() } });
-
-    const session = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      initials: user.initials,
-      role: user.role.name,
-      status: user.status,
-      workspaceId: user.workspaceId,
-    };
 
     return {
       token: app.jwt.sign(session, { expiresIn: "7d" }),
       user: session,
-      permissions: user.role.permissions.filter((p) => p.allowed).map((p) => p.permission.key),
+      permissions,
       mustActivate,
     };
   });
@@ -126,23 +119,18 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           workspaceId,
           lastAccessAt: new Date(),
         },
-        include: { role: { include: { permissions: { include: { permission: true } } } } },
       });
 
-      const session = {
-        id: created.id,
-        email: created.email,
-        name: created.name,
-        initials: created.initials,
-        role: created.role.name,
-        status: created.status,
-        workspaceId: created.workspaceId,
-      };
+      await prisma.spaceMember.create({
+        data: { userId: created.id, workspaceId, roleId: role.id, status: "ACTIVE" },
+      });
+
+      const { session, permissions } = await membershipSession(created.id);
 
       return reply.status(201).send({
         token: app.jwt.sign(session, { expiresIn: "7d" }),
         user: session,
-        permissions: created.role.permissions.filter((p) => p.allowed).map((p) => p.permission.key),
+        permissions,
         mustActivate: false,
       });
     },
@@ -210,10 +198,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (request, reply) => {
-      const user = await prisma.user.findUnique({
-        where: { id: request.user.id },
-        include: { role: { include: { permissions: { include: { permission: true } } } } },
-      });
+      const user = await prisma.user.findUnique({ where: { id: request.user.id } });
       if (!user) return reply.status(404).send({ error: "Usuario no encontrado" });
       if (user.status !== "PENDING") return reply.status(400).send({ error: "La cuenta ya está activa" });
 
@@ -224,48 +209,38 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(400).send({ error: "La nueva contraseña debe ser distinta de la temporal" });
       }
 
-      const updated = await prisma.user.update({
+      await prisma.user.update({
         where: { id: user.id },
         data: { passwordHash: await bcrypt.hash(newPassword, 10), status: "ACTIVE", lastAccessAt: new Date() },
-        include: { role: { include: { permissions: { include: { permission: true } } } } },
+      });
+      await prisma.spaceMember.updateMany({
+        where: { userId: user.id, workspaceId: user.workspaceId },
+        data: { status: "ACTIVE" },
       });
 
-      const session = {
-        id: updated.id,
-        email: updated.email,
-        name: updated.name,
-        initials: updated.initials,
-        role: updated.role.name,
-        status: updated.status,
-        workspaceId: updated.workspaceId,
-      };
+      const { session, permissions } = await membershipSession(user.id);
 
       return {
         token: app.jwt.sign(session, { expiresIn: "7d" }),
         user: session,
-        permissions: updated.role.permissions.filter((p) => p.allowed).map((p) => p.permission.key),
+        permissions,
       };
     },
   );
 
-    /** Perfil de la sesión activa. */  app.get("/me", { onRequest: (request, reply) => app.authenticate(request, reply) }, async (request) => {
-    const user = await prisma.user.findUnique({
-      where: { id: request.user.id },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
-    });
-
-    if (!user) return { error: "Usuario no encontrado" };
+    /** Perfil de la sesión activa (rol del espacio activo). */  app.get("/me", { onRequest: (request, reply) => app.authenticate(request, reply) }, async (request) => {
+    const { session, permissions } = await membershipSession(request.user.id);
 
     return {
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        initials: user.initials,
-        role: user.role.name,
-        status: user.status,
+        id: session.id,
+        email: session.email,
+        name: session.name,
+        initials: session.initials,
+        role: session.role,
+        status: session.status,
       },
-      permissions: user.role.permissions.filter((p) => p.allowed).map((p) => p.permission.key),
+      permissions,
     };
   });
 };

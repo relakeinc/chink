@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useAsync } from "@/lib/useAsync";
 import { onWorkspaceUpdated, workspaceMark } from "@/lib/workspace";
 import { PopoverPortal, useDismissOnOutside, usePopoverAnchor, OverlayPortal } from "@/components/ui/Popover";
+import { NotificationsBell } from "./NotificationsBell";
 import { showNotice } from "@/lib/toast";
 import { WorkspaceDrawer } from "./Sidebar";
 import WorkspaceOnboarding from "@/components/forms/WorkspaceOnboarding";
@@ -83,14 +84,7 @@ export default function TopBar() {
         <Icon name="search-lg" size={18} />
       </button>
 
-      <button
-        type="button"
-        aria-label="Notificaciones"
-        onClick={() => showNotice("No hay notificaciones nuevas.", { variant: "info", icon: "info" })}
-        className="pressable relative flex shrink-0 items-center rounded-[6px]"
-      >
-        <Icon name="notifications" />
-      </button>
+      <NotificationsBell />
 
       <span className="h-[24px] w-px shrink-0 bg-line" />
 

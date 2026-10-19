@@ -9,6 +9,7 @@ import { warehouseRoutes } from "./routes/warehouses.js";
 import { movementRoutes } from "./routes/movements.js";
 import { reportRoutes } from "./routes/reports.js";
 import { settingRoutes } from "./routes/settings.js";
+import { notificationRoutes } from "./routes/notifications.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -35,6 +36,7 @@ export async function buildApp() {
       await protectedApp.register(movementRoutes, { prefix: "/api/movements" });
       await protectedApp.register(reportRoutes, { prefix: "/api/reports" });
       await protectedApp.register(settingRoutes, { prefix: "/api/settings" });
+      await protectedApp.register(notificationRoutes, { prefix: "/api/notifications" });
     },
     { prefix: "/" },
   );

@@ -183,6 +183,16 @@ async function main() {
     ),
   );
 
+  // --- Pertenencia al espacio original (todos los miembros del seed)
+  for (const user of USERS) {
+    const record = users[user.email];
+    const role = roles[user.role];
+    if (!record || !role) continue;
+    await prisma.spaceMember.create({
+      data: { userId: record.id, workspaceId: "default", roleId: role.id, status: user.status },
+    });
+  }
+
   // --- Almacenes
   const warehouses = Object.fromEntries(
     await Promise.all(

@@ -148,10 +148,19 @@ export function InviteModal({ open, onClose, matrix, warehouseOptions, onDone }:
         warehouseIds: warehouseId ? [warehouseId] : undefined,
       });
       if (result.data.alreadyMember) {
+        // Ya estaba en este espacio: no cambió nada, solo se le avisó.
         showNotice(
           result.data.emailSent
-            ? `Ya es miembro: se le avisó por correo a ${result.data.email}.`
-            : `Ya es miembro, pero el aviso por correo no salió.`,
+            ? `Ya estaba en tu espacio: se le avisó por correo a ${result.data.email}.`
+            : `Ya estaba en tu espacio, pero el aviso por correo no salió.`,
+          result.data.emailSent ? {} : { variant: "warning", icon: "warning" },
+        );
+      } else if (result.data.addedToSpace) {
+        // Tenía cuenta propia y entró a este espacio: correo + aviso en la app.
+        showNotice(
+          result.data.emailSent
+            ? `Se añadió a tu espacio: avisado por correo y en la app a ${result.data.email}.`
+            : `Se añadió a tu espacio, pero el correo no salió. Lo verá en la app.`,
           result.data.emailSent ? {} : { variant: "warning", icon: "warning" },
         );
       } else {

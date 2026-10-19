@@ -56,6 +56,8 @@ model User {
   movements         StockMovement[]
   ownedWarehouses   Warehouse[]      @relation("WarehouseOwner")
   settingsUpdates   WorkspaceSetting[]
+  memberships       SpaceMember[]
+  notifications     Notification[]
 
   @@index([workspaceId])
   @@map("users")
@@ -67,6 +69,7 @@ model Role {
   users User[]
 
   permissions RolePermission[]
+  memberships SpaceMember[]
 
   @@map("roles")
 }
@@ -255,6 +258,42 @@ model WorkspaceSetting {
   updatedById String?
   updatedBy   User?   @relation(fields: [updatedById], references: [id], onDelete: SetNull)
   updatedAt   DateTime @updatedAt
+  members     SpaceMember[]
 
   @@map("workspace_settings")
+}
+
+/// Pertenencia a espacios: un usuario puede estar en varios (el propio al
+/// registrarse más los equipos que lo inviten). El rol es por espacio.
+model SpaceMember {
+  userId      String
+  workspaceId String
+  roleId      String
+  status      MemberStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace WorkspaceSetting @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  role      Role             @relation(fields: [roleId], references: [id])
+
+  @@id([userId, workspaceId])
+  @@index([workspaceId])
+  @@map("space_members")
+}
+
+/// Avisos dentro de la app (invitaciones a espacios, etc.).
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String?
+  kind        String   @default("invite")
+  title       String
+  body        String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
 }

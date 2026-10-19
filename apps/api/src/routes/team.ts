@@ -2,7 +2,8 @@ import bcrypt from "bcryptjs";
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { emailAssets, invitationEmail, invitationExistingEmail, sendEmail } from "../lib/email.js";
-import { workspaceIdFor } from "../lib/workspace-scope.js";
+import { workspaceIdFor, membershipSession } from "../lib/workspace-scope.js";
+import { notifyUser } from "./notifications.js";
 
 const inviteBodySchema = {
   type: "object",
@@ -68,16 +69,32 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
     const role = await prisma.role.findUnique({ where: { id: body.roleId } });
     if (!role) return reply.status(400).send({ error: "Rol no válido" });
 
-    // Ya es miembro: no se crea nada ni se toca su cuenta; solo se le avisa.
+    // Ya tiene cuenta: entra a este espacio con su rol asignado, sin tocar
+    // su espacio propio. Recibe correo + aviso dentro de la app.
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
+      const already = await prisma.spaceMember.findUnique({
+        where: { userId_workspaceId: { userId: existing.id, workspaceId: ws } },
+      });
+      if (!already) {
+        await prisma.spaceMember.create({
+          data: { userId: existing.id, workspaceId: ws, roleId: role.id, status: "ACTIVE" },
+        });
+        const space = await prisma.workspaceSetting.findUnique({ where: { id: ws }, select: { spaceName: true } });
+        await notifyUser(existing.id, {
+          workspaceId: ws,
+          title: `Te añadieron a ${space?.spaceName ?? "un espacio"}`,
+          body: `Te añadieron al espacio ${space?.spaceName ?? ""} con el rol ${role.name}. Cámbiate desde el conmutador.`,
+        });
+      }
       return {
         data: {
           id: existing.id,
           email: existing.email,
           role: role.name,
           temporaryPassword: null,
-          alreadyMember: true,
+          alreadyMember: Boolean(already),
+          addedToSpace: !already,
           emailSent: await sendMemberNoticeEmail(request.log, {
             to: email,
             name: existing.name,
@@ -122,6 +139,10 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
           : undefined,
       },
       include: { role: true, warehouses: { include: { warehouse: true } } },
+    });
+
+    await prisma.spaceMember.create({
+      data: { userId: created.id, workspaceId: ws, roleId: role.id, status: "PENDING" },
     });
 
     return reply.status(201).send({
@@ -175,6 +196,45 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
 
   /** Matriz de roles y permisos. */
 
+  /** Espacios del usuario (propio + equipos que lo invitaron), para el conmutador. */
+  app.get("/spaces", async (request) => {
+    const memberships = await prisma.spaceMember.findMany({
+      where: { userId: request.user.id },
+      include: {
+        role: { select: { name: true } },
+        workspace: { select: { id: true, spaceName: true, spaceMark: true, spaceColor: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    const ws = await workspaceIdFor(request);
+    return {
+      data: memberships.map((m) => ({
+        id: m.workspace.id,
+        name: m.workspace.spaceName,
+        mark: m.workspace.spaceMark,
+        color: m.workspace.spaceColor,
+        role: m.role.name,
+        status: m.status,
+        active: m.workspace.id === ws,
+      })),
+    };
+  });
+
+  /** Cambia el espacio activo. Devuelve sesión nueva con el rol de ese espacio. */
+  app.patch("/active-space", async (request, reply) => {
+    const { workspaceId } = (request.body ?? {}) as { workspaceId?: string };
+    if (!workspaceId) return reply.status(400).send({ error: "Falta el espacio" });
+    const member = await prisma.spaceMember.findUnique({
+      where: { userId_workspaceId: { userId: request.user.id, workspaceId } },
+    });
+    if (!member) return reply.status(404).send({ error: "No perteneces a ese espacio" });
+    if (member.status !== "ACTIVE") return reply.status(403).send({ error: "Tu acceso a ese espacio sigue pendiente" });
+
+    await prisma.user.update({ where: { id: request.user.id }, data: { workspaceId, roleId: member.roleId } });
+    const { session, permissions } = await membershipSession(request.user.id);
+    return { token: app.jwt.sign(session, { expiresIn: "7d" }), user: session, permissions };
+  });
+
   /** Directorio de miembros del espacio con su rol, almacenes y último acceso. */
   app.get("/members", async (request) => {
     const query = request.query as { search?: string; warehouse?: string };
@@ -182,20 +242,24 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
     const warehouse = query.warehouse?.trim();
     const ws = await workspaceIdFor(request);
 
-    const [members, siteCount] = await Promise.all([
-      prisma.user.findMany({
+    const [memberships, siteCount] = await Promise.all([
+      prisma.spaceMember.findMany({
         where: {
           workspaceId: ws,
           ...(search
-            ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { email: { contains: search, mode: "insensitive" } }] }
+            ? {
+                user: {
+                  OR: [{ name: { contains: search, mode: "insensitive" } }, { email: { contains: search, mode: "insensitive" } }],
+                },
+              }
             : {}),
-          ...(warehouse ? { warehouses: { some: { warehouse: { code: warehouse, workspaceId: ws } } } } : {}),
+          ...(warehouse ? { user: { warehouses: { some: { warehouse: { code: warehouse, workspaceId: ws } } } } } : {}),
         },
         include: {
           role: true,
-          warehouses: { include: { warehouse: true } },
+          user: { include: { warehouses: { include: { warehouse: true } } } },
         },
-        orderBy: [{ status: "asc" }, { name: "asc" }],
+        orderBy: [{ status: "asc" }, { user: { name: "asc" } }],
       }),
       prisma.warehouse.count({ where: { workspaceId: ws } }),
     ]);
@@ -203,28 +267,28 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
     const meId = request.user.id;
 
     return {
-      data: members.map((member) => ({
-        id: member.id,
-        name: member.name,
-        isYou: member.id === meId,
-        email: member.email,
-        initials: member.initials,
+      data: memberships.map((member) => ({
+        id: member.user.id,
+        name: member.user.name,
+        isYou: member.user.id === meId,
+        email: member.user.email,
+        initials: member.user.initials,
         role: member.role.name,
         warehouses:
-          member.warehouses.length === siteCount && siteCount > 0
+          member.user.warehouses.length === siteCount && siteCount > 0
             ? "Todos los almacenes"
-            : member.warehouses
+            : member.user.warehouses
                 .map((entry) => entry.warehouse.name.replace("Almacén ", "").replace("Centro logístico ", ""))
                 .join(" · ") || "—",
-        lastAccess: formatLastAccess(member.status, member.lastAccessAt, member.invitedAt),
+        lastAccess: formatLastAccess(member.status, member.user.lastAccessAt, member.user.invitedAt),
         status: member.status === "ACTIVE" ? "Activo" : "Pendiente",
-        action: member.status === "PENDING" ? "Reenviar invitación" : member.id === meId ? "Ver perfil →" : "Editar acceso",
+        action: member.status === "PENDING" ? "Reenviar invitación" : member.user.id === meId ? "Ver perfil →" : "Editar acceso",
       })),
       meta: {
-        active: members.filter((m) => m.status === "ACTIVE").length,
-        pending: members.filter((m) => m.status === "PENDING").length,
-        roles: new Set(members.map((m) => m.role.name)).size,
-        warehouses: new Set(members.flatMap((m) => m.warehouses.map((e) => e.warehouseId))).size,
+        active: memberships.filter((m) => m.status === "ACTIVE").length,
+        pending: memberships.filter((m) => m.status === "PENDING").length,
+        roles: new Set(memberships.map((m) => m.role.name)).size,
+        warehouses: new Set(memberships.flatMap((m) => m.user.warehouses.map((e) => e.warehouseId))).size,
       },
     };
   });
@@ -238,7 +302,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
       prisma.rolePermission.findMany(),
     ]);
 
-    const counts = await prisma.user.groupBy({ by: ["roleId", "status"], _count: true, where: { workspaceId: ws } });
+    const counts = await prisma.spaceMember.groupBy({ by: ["roleId", "status"], _count: true, where: { workspaceId: ws } });
 
     return {
       roles: roles.map((role) => {
@@ -257,7 +321,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  /** Actualiza el rol de un miembro del espacio. */
+  /** Actualiza el rol de un miembro EN ESTE ESPACIO (el rol es por espacio). */
   app.patch<{ Params: { id: string } }>(
     "/members/:id",
     { preHandler: app.requirePermission("admin") },
@@ -266,12 +330,19 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
       if (!roleId) return reply.status(400).send({ error: "Falta roleId" });
 
       const ws = await workspaceIdFor(request);
-      const member = await prisma.user.findFirst({ where: { id: request.params.id, workspaceId: ws } });
+      const member = await prisma.spaceMember.findUnique({
+        where: { userId_workspaceId: { userId: request.params.id, workspaceId: ws } },
+      });
       if (!member) return reply.status(404).send({ error: "Miembro no encontrado" });
-      if (member.id === request.user.id) return reply.status(400).send({ error: "No puedes cambiarte el rol a ti mismo" });
+      if (member.userId === request.user.id) return reply.status(400).send({ error: "No puedes cambiarte el rol a ti mismo" });
 
-      await prisma.user.update({ where: { id: member.id }, data: { roleId } });
-      return { data: { id: member.id, roleId } };
+      await prisma.spaceMember.update({
+        where: { userId_workspaceId: { userId: member.userId, workspaceId: ws } },
+        data: { roleId },
+      });
+      // Si es su espacio activo, el rol global lo acompaña (coherencia).
+      await prisma.user.updateMany({ where: { id: member.userId, workspaceId: ws }, data: { roleId } });
+      return { data: { id: member.userId, roleId } };
     },
   );
 

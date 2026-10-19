@@ -314,7 +314,7 @@ export const api = {
     }),
   inviteMember: (body: { email: string; name: string; roleId: string; warehouseIds?: string[] }) =>
     request<{
-      data: { id: string; email: string; role: string; temporaryPassword: string | null; alreadyMember?: boolean; emailSent: boolean };
+      data: { id: string; email: string; role: string; temporaryPassword: string | null; alreadyMember?: boolean; addedToSpace?: boolean; emailSent: boolean };
     }>("/api/team/invitations", {
       method: "POST",
       body,
@@ -323,6 +323,21 @@ export const api = {
     request<{ data: { id: string; email: string; temporaryPassword: string; emailSent: boolean } }>(`/api/team/invitations/${id}/resend`, {
       method: "POST",
     }),
+  getSpaces: () =>
+    request<{
+      data: { id: string; name: string; mark: string; color: string; role: string; status: string; active: boolean }[];
+    }>("/api/team/spaces"),
+  setActiveSpace: (workspaceId: string) =>
+    request<{ token: string; user: SessionUser; permissions: string[] }>("/api/team/active-space", {
+      method: "PATCH",
+      body: { workspaceId },
+    }),
+  getNotifications: () =>
+    request<{ data: { id: string; kind: string; title: string; body: string; read: boolean; when: string }[]; unread: number }>(
+      "/api/notifications",
+    ),
+  markNotificationsRead: (ids?: string[]) =>
+    request<{ data: { unread: number } }>("/api/notifications/read", { method: "PATCH", body: ids ? { ids } : {} }),
   sendReportEmail: (body: { name: string; email: string }) =>
     request<{ data: { id: string; email: string; name: string } }>("/api/reports/email", { method: "POST", body }),
 

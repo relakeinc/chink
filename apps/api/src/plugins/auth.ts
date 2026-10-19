@@ -48,9 +48,11 @@ export async function registerAuth(app: FastifyInstance) {
   });
 
   app.decorate("requirePermission", (permission: string) => async (request: FastifyRequest, reply: FastifyReply) => {
+    // El rol es por espacio activo y viaja firmado en el JWT: no se usa el
+    // rol global del usuario, que puede diferir entre espacios.
     const user = request.user;
     const record = await prisma.rolePermission.findFirst({
-      where: { allowed: true, permission: { key: permission }, role: { users: { some: { id: user.id } } } },
+      where: { allowed: true, permission: { key: permission }, role: { name: user.role } },
       select: { roleId: true },
     });
     if (!record) return reply.status(403).send({ error: "Tu rol no tiene este permiso" });

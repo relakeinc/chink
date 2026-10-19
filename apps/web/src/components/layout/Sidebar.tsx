@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/context/AuthContext";
-import { api } from "@/lib/api";
+import { api, setToken } from "@/lib/api";
 import { useAsync } from "@/lib/useAsync";
 import { PopoverPortal, useDismissOnOutside, usePopoverAnchor, OverlayPortal } from "@/components/ui/Popover";
-import { onWorkspaceUpdated, workspaceMark } from "@/lib/workspace";
+import { notifyWorkspaceUpdated, onWorkspaceUpdated, workspaceMark } from "@/lib/workspace";
 import WorkspaceOnboarding from "@/components/forms/WorkspaceOnboarding";
 
 interface NavItem {
@@ -33,15 +33,25 @@ export const ADMIN_NAV: NavItem[] = [
 
 /** Estado compartido del conmutador: datos del espacio + menú por portal. */
 function useWorkspaceMenu() {
-  const { can, logout } = useAuth();
+  const { can, logout, refresh } = useAuth();
   const navigate = useNavigate();
   const settings = useAsync(() => api.getSettings(), []);
   const spaceName = settings.data?.data?.spaceName ?? "Espacio";
   const legalName = settings.data?.data?.legalName ?? "";
   const mark = workspaceMark(settings.data?.data?.spaceMark);
 
+  // Espacios del usuario (propio + equipos que lo invitaron).
+  const spaces = useAsync(() => api.getSpaces(), []);
+
   // Si los ajustes cambian en otra pantalla, relee sin recargar la página.
-  useEffect(() => onWorkspaceUpdated(() => void settings.reload()), [settings.reload]);
+  useEffect(
+    () =>
+      onWorkspaceUpdated(() => {
+        void settings.reload();
+        void spaces.reload();
+      }),
+    [settings.reload, spaces.reload],
+  );
 
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
@@ -55,7 +65,19 @@ function useWorkspaceMenu() {
     navigate(path);
   }
 
-  return { can, logout, navigate, spaceName, legalName, mark, open, setOpen, close, go, anchorRef, anchor, panelRef };
+  /** Cambia el espacio activo: nueva sesión con el rol de ese espacio. */
+  async function switchSpace(id: string) {
+    const res = await api.setActiveSpace(id);
+    setToken(res.token);
+    await refresh();
+    notifyWorkspaceUpdated();
+    close();
+    // Recarga en Inicio: cada pantalla carga sus datos al montar y así no
+    // queda nada del espacio anterior en memoria.
+    window.location.assign("/inicio");
+  }
+
+  return { can, logout, navigate, spaceName, legalName, mark, open, setOpen, close, go, switchSpace, spaces: spaces.data?.data ?? [], anchorRef, anchor, panelRef };
 }
 
 type WorkspaceMenuApi = ReturnType<typeof useWorkspaceMenu>;
@@ -77,6 +99,36 @@ function WorkspaceMenuItems({ ws, onNavigate, onNewSpace }: { ws: WorkspaceMenuA
           {ws.legalName ? <span className="truncate text-[10px] text-muted">{ws.legalName}</span> : null}
         </span>
       </div>
+
+      {/* Conmutador: propio + equipos que invitaron (acceso pendiente no cambia). */}
+      {ws.spaces.length > 1 ? (
+        <div className="border-b border-edge px-[8px] py-[6px]">
+          <p className="px-[8px] pt-[2px] pb-[4px] text-[10px] font-semibold tracking-wide text-muted">MIS ESPACIOS</p>
+          {ws.spaces.map((space) => (
+            <button
+              key={space.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={space.active}
+              disabled={space.active || space.status !== "ACTIVE"}
+              onClick={() => {
+                onNavigate?.();
+                void ws.switchSpace(space.id);
+              }}
+              className={`flex w-full items-center gap-[8px] rounded-[5px] px-[8px] py-[6px] text-left transition-colors ${
+                space.active ? "bg-subtle" : "hover:bg-subtle"
+              } ${space.status !== "ACTIVE" ? "opacity-50" : ""}`}
+            >
+              <Icon name={workspaceMark(space.mark)} size={20} />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-[12px] font-medium text-ink">{space.name}</span>
+                <span className="text-[10px] text-muted">{space.status !== "ACTIVE" ? "Acceso pendiente" : `Rol: ${space.role}`}</span>
+              </span>
+              {space.active ? <span aria-hidden className="size-[8px] shrink-0 rounded-full bg-accent" /> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <button
         type="button"
