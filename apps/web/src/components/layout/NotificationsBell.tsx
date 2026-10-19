@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { api } from "@/lib/api";
 import { showNotice } from "@/lib/toast";
+import { DATA_CHANGED_EVENT, type DataChangedDetail } from "@/lib/realtime";
 import { PopoverPortal, useDismissOnOutside, usePopoverAnchor } from "@/components/ui/Popover";
 
 interface BellItem {
@@ -46,8 +47,13 @@ export function NotificationsBell() {
 
   useEffect(() => {
     void load(false);
-    const timer = window.setInterval(() => void load(true), 30000);
-    return () => window.clearInterval(timer);
+    // Tiempo real: el servidor avisa por SSE al llegar algo nuevo.
+    const onChange = (event: Event) => {
+      const channels = (event as CustomEvent<DataChangedDetail>).detail?.channels ?? [];
+      if (channels.includes("notifications")) void load(true);
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, onChange);
   }, [load]);
 
   async function toggle() {

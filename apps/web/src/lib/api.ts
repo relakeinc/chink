@@ -1,4 +1,6 @@
 /** Cliente HTTP de la API. Añade el token de sesión y normaliza los errores. */
+import { notifyLocalChange } from "./realtime";
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 const TOKEN_KEY = "chink-saas-token";
 
@@ -32,7 +34,7 @@ function withQuery(path: string, params?: QueryParams): string {
   return qs ? `${path}?${qs}` : path;
 }
 
-async function request<T>(path: string, options: { method?: string; body?: unknown; params?: QueryParams } = {}): Promise<T> {
+async function request<T>(path: string, options: { method?: string; body?: unknown; params?: QueryParams; silent?: boolean } = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(`${BASE_URL}${withQuery(path, options.params)}`, {
     method: options.method ?? "GET",
@@ -53,7 +55,26 @@ async function request<T>(path: string, options: { method?: string; body?: unkno
     throw new ApiError(body?.error ?? `Error ${response.status}`, response.status);
   }
 
-  return (await response.json()) as T;
+  const result = (await response.json()) as T;
+
+  // Tras una mutación, la app se entera sola: el hook de datos recarga y el
+  // servidor además avisa por SSE al resto de miembros del espacio.
+  // `silent` lo omite cuando quien llama orquesta el refresco (p. ej. cambio de espacio).
+  const method = (options.method ?? "GET").toUpperCase();
+  if (method !== "GET" && !options.silent) notifyLocalChange(channelsFor(path));
+
+  return result;
+}
+
+/** Canales de tiempo real que toca cada ruta de escritura. */
+function channelsFor(path: string): string[] {
+  if (path.startsWith("/api/inventory")) return ["inventory"];
+  if (path.startsWith("/api/movements")) return ["movements", "inventory"];
+  if (path.startsWith("/api/warehouses")) return ["warehouses", "inventory"];
+  if (path.startsWith("/api/team")) return ["team"];
+  if (path.startsWith("/api/settings")) return ["settings"];
+  if (path.startsWith("/api/notifications")) return ["notifications"];
+  return [];
 }
 
 /* --------------------------------------------------------------- Tipos */
@@ -331,6 +352,7 @@ export const api = {
     request<{ token: string; user: SessionUser; permissions: string[] }>("/api/team/active-space", {
       method: "PATCH",
       body: { workspaceId },
+      silent: true,
     }),
   getNotifications: () =>
     request<{ data: { id: string; kind: string; title: string; body: string; read: boolean; when: string }[]; unread: number }>(

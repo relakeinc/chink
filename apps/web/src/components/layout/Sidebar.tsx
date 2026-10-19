@@ -6,6 +6,7 @@ import { api, setToken } from "@/lib/api";
 import { useAsync } from "@/lib/useAsync";
 import { PopoverPortal, useDismissOnOutside, usePopoverAnchor, OverlayPortal } from "@/components/ui/Popover";
 import { notifyWorkspaceUpdated, onWorkspaceUpdated, workspaceMark } from "@/lib/workspace";
+import { connectRealtime, notifyLocalChange } from "@/lib/realtime";
 import WorkspaceOnboarding from "@/components/forms/WorkspaceOnboarding";
 
 interface NavItem {
@@ -70,11 +71,12 @@ function useWorkspaceMenu() {
     const res = await api.setActiveSpace(id);
     setToken(res.token);
     await refresh();
+    connectRealtime();
     notifyWorkspaceUpdated();
+    // Todo recarga solo con el token nuevo (guardia de carrera en useAsync).
+    notifyLocalChange(["team", "settings", "inventory"]);
     close();
-    // Recarga en Inicio: cada pantalla carga sus datos al montar y así no
-    // queda nada del espacio anterior en memoria.
-    window.location.assign("/inicio");
+    navigate("/inicio");
   }
 
   return { can, logout, navigate, spaceName, legalName, mark, open, setOpen, close, go, switchSpace, spaces: spaces.data?.data ?? [], anchorRef, anchor, panelRef };

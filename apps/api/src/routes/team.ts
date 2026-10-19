@@ -4,6 +4,7 @@ import { prisma } from "@chink-saas/db";
 import { emailAssets, invitationEmail, invitationExistingEmail, sendEmail } from "../lib/email.js";
 import { workspaceIdFor, membershipSession } from "../lib/workspace-scope.js";
 import { notifyUser } from "./notifications.js";
+import { publishToUser, publishToWorkspace } from "../lib/realtime-hub.js";
 
 const inviteBodySchema = {
   type: "object",
@@ -86,6 +87,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
           title: `Te añadieron a ${space?.spaceName ?? "un espacio"}`,
           body: `Te añadieron al espacio ${space?.spaceName ?? ""} con el rol ${role.name}. Cámbiate desde el conmutador.`,
         });
+        publishToUser(existing.id, { channels: ["notifications", "team"] });
       }
       return {
         data: {
@@ -145,6 +147,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
       data: { userId: created.id, workspaceId: ws, roleId: role.id, status: "PENDING" },
     });
 
+    await publishToWorkspace(ws, { channels: ["team"] });
     return reply.status(201).send({
       data: {
         id: created.id,
@@ -166,6 +169,12 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
    * renueva la fecha de invitación. Sin correo saliente, la contraseña se
    * entrega al administrador para compartirla por su canal habitual.
    */
+
+  /**
+   * Reenvía una invitación pendiente: genera una contraseña temporal nueva y
+   * renueva la fecha de invitación. Sin correo saliente, la contraseña se
+   * entrega al administrador para compartirla por su canal habitual.
+   */
   app.post<{ Params: { id: string } }>("/invitations/:id/resend", { preHandler: app.requirePermission("admin") }, async (request, reply) => {
     const ws = await workspaceIdFor(request);
     const member = await prisma.user.findFirst({ where: { id: request.params.id, workspaceId: ws } });
@@ -177,6 +186,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
       where: { id: member.id },
       data: { passwordHash: await bcrypt.hash(temporaryPassword, 10), invitedAt: new Date() },
     });
+    await publishToWorkspace(ws, { channels: ["team"] });
 
     return {
       data: {
@@ -342,6 +352,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
       });
       // Si es su espacio activo, el rol global lo acompaña (coherencia).
       await prisma.user.updateMany({ where: { id: member.userId, workspaceId: ws }, data: { roleId } });
+      await publishToWorkspace(ws, { channels: ["team"] });
       return { data: { id: member.userId, roleId } };
     },
   );
@@ -368,6 +379,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
     },
     async (request, reply) => {
       const { roleId, permissionId, allowed } = request.body as { roleId: string; permissionId: string; allowed: boolean };
+      const ws = await workspaceIdFor(request);
       const [role, permission] = await Promise.all([
         prisma.role.findUnique({ where: { id: roleId } }),
         prisma.permission.findUnique({ where: { id: permissionId } }),
@@ -379,6 +391,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
         update: { allowed },
         create: { roleId, permissionId, allowed },
       });
+      await publishToWorkspace(ws, { channels: ["team"] });
       return { data: { roleId, permissionId, allowed } };
     },
   );

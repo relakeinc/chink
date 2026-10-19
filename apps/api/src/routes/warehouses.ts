@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { workspaceIdFor } from "../lib/workspace-scope.js";
+import { publishToWorkspace } from "../lib/realtime-hub.js";
 
 const createBodySchema = {
   type: "object",
@@ -33,6 +34,7 @@ export const warehouseRoutes: FastifyPluginAsync = async (app) => {
           workspaceId: ws,
         },
       });
+      await publishToWorkspace(ws, { channels: ["warehouses", "inventory"] });
       return reply.status(201).send({
         data: {
           id: created.id,

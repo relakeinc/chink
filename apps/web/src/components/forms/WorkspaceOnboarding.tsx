@@ -17,7 +17,8 @@ const STEPS = ["Espacio", "Contacto", "Icono", "Resumen"] as const;
  * Móvil a pantalla completa; en escritorio, tarjeta centrada.
  */
 export default function WorkspaceOnboarding({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const settings = useAsync(() => api.getSettings(), []);
+  // Sin `live`: el asistente es un borrador; no debe resetearse a mitad.
+  const settings = useAsync(() => api.getSettings(), [], { live: false });
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({ spaceName: "", legalName: "", contactEmail: "", taxId: "", spaceMark: "workspace-mark" });
   const [saving, setSaving] = useState(false);

@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { workspaceIdFor } from "../lib/workspace-scope.js";
+import { publishToWorkspace } from "../lib/realtime-hub.js";
 
 const body = {
   type: "object",
@@ -117,6 +118,7 @@ export const settingRoutes: FastifyPluginAsync = async (app) => {
 
     const settings = await prisma.workspaceSetting.update({ where: { id: ws }, data: update });
 
+    await publishToWorkspace(ws, { channels: ["settings"] });
     return {
       data: {
         ...settings,

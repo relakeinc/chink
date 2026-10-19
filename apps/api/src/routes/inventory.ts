@@ -10,6 +10,7 @@ import {
   publicUrlFor,
 } from "../lib/r2.js";
 import { workspaceIdFor } from "../lib/workspace-scope.js";
+import { publishToWorkspace } from "../lib/realtime-hub.js";
 
 /** Vistas disponibles en las pestañas del catálogo. */
 const VIEWS = ["all", "low", "archived"] as const;
@@ -327,6 +328,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
         include: LOCATIONS,
       });
 
+      await publishToWorkspace(ws, { channels: ["inventory"] });
       return reply.status(201).send({ data: toProductDto(created) });
     } catch (error) {
       if (isUniqueViolation(error)) {
@@ -376,6 +378,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
         }
       }
 
+      await publishToWorkspace(ws, { channels: ["inventory"] });
       return { data: updated.map(toProductDto) };
     } catch (error) {
       return sendR2Error(reply, error);
@@ -446,10 +449,11 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       try {
         await deleteR2Object(existing.imageKey);
       } catch (error) {
-        request.log.warn({ oldKey: existing.imageKey, error }, "No se pudo borrar la imagen anterior en R2");
+        request.log.warn({ oldKey: existing.imageKey }, "No se pudo borrar la imagen anterior en R2");
       }
     }
 
+    await publishToWorkspace(ws, { channels: ["inventory"] });
     return { data: toProductDto(updated) };
   });
 };

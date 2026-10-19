@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { api, setToken } from "@/lib/api";
+import { connectRealtime } from "@/lib/realtime";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/primitives";
 import AuthSplit from "@/components/layout/AuthSplit";
@@ -36,6 +37,7 @@ export default function Registro() {
       const session = await api.register({ name: name.trim(), email: email.trim(), password });
       setToken(session.token);
       await refresh();
+      connectRealtime();
       navigate("/inicio", { replace: true });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo crear la cuenta");

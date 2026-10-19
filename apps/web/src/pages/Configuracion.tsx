@@ -96,7 +96,8 @@ export default function Configuracion() {
   const [saving, setSaving] = useState(false);
   const { notice, showNotice } = useNotice();
 
-  const settings = useAsync(() => api.getSettings(), []);
+  // Sin `live`: el formulario es un borrador; solo se relee al guardar o descartar.
+  const settings = useAsync(() => api.getSettings(), [], { live: false });
   // Debe declararse ANTES de cualquier return temprano: si un hook se ejecuta
   // solo en algunas renderizaciones, React lanza "Rendered more hooks than
   // during the previous render".

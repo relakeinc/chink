@@ -4,6 +4,7 @@ import type { Prisma } from "@chink-saas/db";
 import { prisma } from "@chink-saas/db";
 import { emailAssets, lowStockEmail, sendEmail } from "../lib/email.js";
 import { workspaceIdFor } from "../lib/workspace-scope.js";
+import { publishToWorkspace } from "../lib/realtime-hub.js";
 
 const TYPE_LABEL: Record<MovementType, string> = {
   ENTRY: "Entrada",
@@ -198,6 +199,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    await publishToWorkspace(ws, { channels: ["movements", "inventory"] });
     return reply.status(201).send({
       data: {
         id: created.id,

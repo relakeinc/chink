@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import { ApiError, api, getToken, setToken } from "@/lib/api";
 import type { SessionUser } from "@/lib/api";
+import { connectRealtime, disconnectRealtime } from "@/lib/realtime";
 
 interface AuthState {
   user: SessionUser | null;
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setUser(session.user);
         setPermissions(session.permissions);
+        connectRealtime();
       } catch {
         setToken(null);
       } finally {
@@ -73,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(session.token);
       setUser(session.user);
       setPermissions(session.permissions);
+      connectRealtime();
     } catch (cause) {
       const message = cause instanceof ApiError ? cause.message : "No se pudo iniciar sesión";
       setError(message);
@@ -81,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    disconnectRealtime();
     setToken(null);
     setUser(null);
     setPermissions([]);

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DATA_CHANGED_EVENT } from "./realtime";
 
 export interface AsyncState<T> {
   data: T | null;
@@ -17,28 +18,42 @@ export interface AsyncState<T> {
  * Clave para que la interfaz no parpadee: una vez hay datos, las peticiones
  * siguientes se marcan como `refreshing` y la vista conserva el contenido
  * anterior en lugar de sustituirlo por un esqueleto.
+ *
+ * Además es tiempo real: ante `chink:data-changed` (mutación propia o aviso
+ * SSE del servidor) recarga sola, salvo `live: false` para formularios con
+ * borrador sin guardar.
  */
-export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): AsyncState<T> {
+export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = [], opts: { live?: boolean } = {}): AsyncState<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasData = useRef(false);
+  // Guardia de carrera: si dos recargas se pisan, gana la última.
+  const seq = useRef(0);
+  const live = opts.live ?? true;
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
 
   const run = useCallback(async () => {
+    const turn = ++seq.current;
     if (hasData.current) setRefreshing(true);
     else setLoading(true);
     setError(null);
 
     try {
-      const result = await fn();
+      const result = await fnRef.current();
+      if (turn !== seq.current) return;
       setData(result);
       hasData.current = true;
     } catch (cause) {
+      if (turn !== seq.current) return;
       setError(cause instanceof Error ? cause.message : "Error al cargar los datos");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (turn === seq.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
@@ -46,6 +61,19 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): AsyncSt
   useEffect(() => {
     void run();
   }, [run]);
+
+  // Tiempo real: recarga cuando algo cambia en cualquier cliente.
+  const liveRef = useRef(live);
+  liveRef.current = live;
+  const runRef = useRef(run);
+  runRef.current = run;
+  useEffect(() => {
+    const onChange = () => {
+      if (liveRef.current) void runRef.current();
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, onChange);
+  }, []);
 
   return { data, loading, refreshing, error, reload: run, setData };
 }

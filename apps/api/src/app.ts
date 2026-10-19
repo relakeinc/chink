@@ -10,6 +10,7 @@ import { movementRoutes } from "./routes/movements.js";
 import { reportRoutes } from "./routes/reports.js";
 import { settingRoutes } from "./routes/settings.js";
 import { notificationRoutes } from "./routes/notifications.js";
+import { streamRoutes } from "./routes/stream.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -22,6 +23,9 @@ export async function buildApp() {
   app.get("/api/health", async () => ({ status: "ok" }));
 
   await app.register(authRoutes, { prefix: "/api/auth" });
+
+  // Tiempo real por SSE (el token va en la query: EventSource no manda cabeceras).
+  await app.register(streamRoutes, { prefix: "/api" });
 
   // Todo lo demás exige sesión.
   await app.register(
