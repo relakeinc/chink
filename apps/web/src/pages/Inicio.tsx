@@ -129,7 +129,7 @@ export default function Inicio() {
       <div className="flex flex-col gap-[20px]">
         <div className="flex flex-col gap-[20px] xl:flex-row">
           <Card className="flex w-full min-w-0 flex-col gap-[20px] p-[20px] xl:w-[1090px] xl:shrink-0">
-            <SectionHeader title="Movimientos de la semana" subtitle="9–15 octubre · Entradas y salidas confirmadas" action={<LinkAction onClick={() => navigate("/reportes")}>Ver reportes</LinkAction>} />
+            <SectionHeader title="Movimientos recientes" subtitle="Entradas y salidas confirmadas" action={<LinkAction onClick={() => navigate("/reportes")}>Ver reportes</LinkAction>} />
             {weekly.loading ? <LoadingBlock variant="text" /> : <BarChart data={weekly.data?.data ?? []} max={chartMax} />}
           </Card>
 
@@ -199,7 +199,7 @@ export default function Inicio() {
         </div>
       </div>
 
-      <PageFooter left="Última actualización: 15 oct 2026 · 10:42" right="Datos de ejemplo · COP" />
+      <PageFooter left={`Actualizado: ${new Date().toLocaleString("es-CO")}`} right="COP" />
       <MovementModal
         open={showMovement}
         onClose={() => setShowMovement(false)}

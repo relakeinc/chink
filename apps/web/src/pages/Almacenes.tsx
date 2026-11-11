@@ -192,7 +192,7 @@ export default function Almacenes() {
         </div>
       </Card>
 
-      <PageFooter left="Última actualización: 15 oct 2026 · 10:42" right="Datos de ejemplo · COP" />
+      <PageFooter left={`Actualizado: ${new Date().toLocaleString("es-CO")}`} right="COP" />
       <MovementModal
         open={showTransfer}
         onClose={() => setShowTransfer(false)}

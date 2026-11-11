@@ -60,6 +60,7 @@ pnpm --filter @chink-saas/db seed
 
 - Todas las rutas privadas requieren JWT.
 - Las operaciones sensibles requieren permisos del rol activo.
+- El stock negativo se permite solo cuando `allowNegativeStock` está activado.
 - Las contraseñas se almacenan con bcrypt.
 - Los tokens de sesión expiran en 12 horas.
 - No subas `.env`, logs, claves privadas ni credenciales.

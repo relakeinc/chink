@@ -86,6 +86,7 @@ export default function Inventario() {
   const [showAdd, setShowAdd] = useState(false);
   const [showImages, setShowImages] = useState(false);
   const [showAdjust, setShowAdjust] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const { showNotice } = useNotice();
 
   const searchRef = useRef<HTMLInputElement>(null);
@@ -355,6 +356,17 @@ export default function Inventario() {
   const selectedCount = selected.size;
   const selectedProducts = rows.filter((row) => selected.has(row.id));
 
+  async function archiveSelected() {
+    if (selectedProducts.length !== 1) return;
+    if (!window.confirm("¿Archivar este producto?")) return;
+    const product = selectedProducts[0];
+    if (!product) return;
+    await api.updateProduct(product.id, { archived: true });
+    setSelected(new Set());
+    showNotice("Producto archivado.");
+    await load();
+  }
+
   return (
     <>
       <PageHeader
@@ -447,6 +459,8 @@ export default function Inventario() {
               <button type="button" onClick={adjustSelected} className="text-[11px] text-accent-text transition-colors hover:text-accent">
                 Ajustar stock
               </button>
+              {selectedCount === 1 ? <button type="button" onClick={() => setShowEdit(true)} className="text-[11px] text-accent-text transition-colors hover:text-accent">Editar</button> : null}
+              {selectedCount === 1 ? <button type="button" onClick={() => void archiveSelected()} className="text-[11px] text-accent-text transition-colors hover:text-accent">Archivar</button> : null}
               <button type="button" onClick={printLabels} className="text-[11px] text-accent-text transition-colors hover:text-accent">
                 Imprimir etiqueta
               </button>
@@ -481,7 +495,7 @@ export default function Inventario() {
 
       <PageFooter
         left="Valoración a coste medio ponderado · Importes sin IVA"
-        right={`Datos de ejemplo · COP · ${formatPercent(summary.totalStock > 0 ? (summary.available / summary.totalStock) * 100 : 0)} disponible`}
+        right={`COP · ${formatPercent(summary.totalStock > 0 ? (summary.available / summary.totalStock) * 100 : 0)} disponible`}
       />
 
       <AddProductModal open={showAdd} onClose={() => setShowAdd(false)} onCreated={load} />
@@ -493,6 +507,7 @@ export default function Inventario() {
         onClose={() => setShowAdjust(false)}
         onDone={load}
       />
+      {selectedProducts[0] ? <EditProductModal open={showEdit} product={selectedProducts[0]} onClose={() => setShowEdit(false)} onUpdated={async () => { setShowEdit(false); setSelected(new Set()); await load(); }} /> : null}
     </>
   );
 }
@@ -750,7 +765,7 @@ function EditProductImagesModal({
 }
 
 function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => Promise<void> }) {
-  const [form, setForm] = useState({ sku: "", name: "", category: "", stock: "0", reserved: "0", unitCost: "0" });
+  const [form, setForm] = useState({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0" });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -766,7 +781,7 @@ function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose:
   }, [preview]);
 
   function resetAll() {
-    setForm({ sku: "", name: "", category: "", stock: "0", reserved: "0", unitCost: "0" });
+    setForm({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0" });
     setImageFile(null);
     setPreview(null);
     setError(null);
@@ -797,6 +812,7 @@ function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose:
         category: form.category.trim(),
         stock: Number(form.stock) || 0,
         reserved: Number(form.reserved) || 0,
+        minStock: Number(form.minStock) || 0,
         unitCost: Number(String(form.unitCost).replace(",", ".")) || 0,
       });
 
@@ -869,6 +885,9 @@ function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose:
         <Field label="Reservado">
           <input className={inputClass} value={form.reserved} onChange={update("reserved")} inputMode="numeric" />
         </Field>
+        <Field label="Stock mínimo">
+          <input className={inputClass} value={form.minStock} onChange={update("minStock")} inputMode="numeric" />
+        </Field>
         <div className="col-span-2 flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Foto del producto (opcional)</span>
           <div className="flex items-center gap-[12px]">
@@ -896,4 +915,35 @@ function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose:
       </div>
     </Modal>
   );
+}
+
+function EditProductModal({ open, product, onClose, onUpdated }: { open: boolean; product: Product; onClose: () => void; onUpdated: () => Promise<void> }) {
+  const [form, setForm] = useState({ name: product.name, category: product.category, unitCost: String(product.unitCost), minStock: String(product.minStock) });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { showNotice } = useNotice();
+
+  useEffect(() => {
+    if (open) setForm({ name: product.name, category: product.category, unitCost: String(product.unitCost), minStock: String(product.minStock) });
+  }, [open, product]);
+
+  async function submit() {
+    setSaving(true); setError(null);
+    try {
+      await api.updateProduct(product.id, { name: form.name.trim(), category: form.category.trim(), unitCost: Number(form.unitCost.replace(",", ".")), minStock: Number(form.minStock) || 0 });
+      showNotice("Producto actualizado.");
+      await onUpdated();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo actualizar el producto"); }
+    finally { setSaving(false); }
+  }
+
+  return <Modal open={open} title="Editar producto" description="Actualiza los datos del producto. El stock se modifica mediante movimientos." onClose={onClose} footer={<><Button variant="filter" height={36} onClick={onClose}>Cancelar</Button><Button variant="primary" height={36} onClick={() => void submit()} disabled={saving}>{saving ? "Guardando…" : "Guardar cambios"}</Button></>}>
+    {error ? <p className="text-[12px] text-warn">{error}</p> : null}
+    <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
+      <Field label="Nombre"><input className={inputClass} value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} /></Field>
+      <Field label="Categoría"><input className={inputClass} value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} /></Field>
+      <Field label="Coste por unidad (COP)"><input className={inputClass} value={form.unitCost} onChange={(e) => setForm((p) => ({ ...p, unitCost: e.target.value }))} inputMode="decimal" /></Field>
+      <Field label="Stock mínimo"><input className={inputClass} value={form.minStock} onChange={(e) => setForm((p) => ({ ...p, minStock: e.target.value }))} inputMode="numeric" /></Field>
+    </div>
+  </Modal>;
 }

@@ -85,7 +85,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
         <h1 className="font-outfit text-[24px] leading-[1.15] font-bold text-ink md:text-[30px]">{title}</h1>
         <p className="mt-[6px] text-[13px] leading-[1.5] text-muted">{description}</p>
       </div>
-      {actions ? <div className="flex shrink-0 items-start gap-[10px]">{actions}</div> : null}
+      {actions ? <div className="flex w-full shrink-0 flex-wrap items-start gap-[10px] sm:w-auto">{actions}</div> : null}
     </header>
   );
 }

@@ -236,7 +236,7 @@ export default function Movimientos() {
         </div>
       </Card>
 
-      <PageFooter left="Última actualización: 15 oct 2026 · 10:42" right="Datos de ejemplo · COP" />
+      <PageFooter left={`Actualizado: ${new Date().toLocaleString("es-CO")}`} right="COP" />
       <MovementModal
         open={showMovement}
         onClose={() => setShowMovement(false)}

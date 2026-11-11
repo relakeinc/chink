@@ -21,7 +21,7 @@ export function printReport(title: string, header: string[], rows: string[][]) {
 </style></head>
 <body>
   <h1>${escape(title)}</h1>
-  <p class="meta">Chink · Datos de ejemplo · ${new Date().toLocaleString("es-CO")}</p>
+  <p class="meta">Chink · ${new Date().toLocaleString("es-CO")}</p>
   <table>
     <thead><tr>${header.map((h) => `<th>${escape(h)}</th>`).join("")}</tr></thead>
     <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escape(cell)}</td>`).join("")}</tr>`).join("")}</tbody>

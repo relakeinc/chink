@@ -90,6 +90,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!product) return reply.status(404).send({ error: "Producto no encontrado" });
     const ws = product.workspaceId;
+    const settings = await prisma.workspaceSetting.findUnique({ where: { id: ws }, select: { allowNegativeStock: true } });
 
     if (body.type === "TRANSFER" && !body.destinationId) {
       return reply.status(400).send({ error: "Una transferencia necesita un almacén de destino" });
@@ -120,14 +121,15 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
       apply(body.destinationId, body.quantity);
     } else apply(body.originId, body.direction === "out" ? -body.quantity : body.quantity);
 
-    // No se permite dejar existencias negativas.
-    for (const [warehouseId, delta] of deltas) {
-      const current = product.locations.find((l) => l.warehouseId === warehouseId)?.quantity ?? 0;
-      if (current + delta < 0) {
-        const warehouse = await prisma.warehouse.findFirst({ where: { id: warehouseId, workspaceId: ws }, select: { name: true } });
-        return reply.status(409).send({
-          error: `No hay stock suficiente en ${warehouse?.name ?? "ese almacén"} (${current} u.)`,
-        });
+    if (!settings?.allowNegativeStock) {
+      for (const [warehouseId, delta] of deltas) {
+        const current = product.locations.find((l) => l.warehouseId === warehouseId)?.quantity ?? 0;
+        if (current + delta < 0) {
+          const warehouse = await prisma.warehouse.findFirst({ where: { id: warehouseId, workspaceId: ws }, select: { name: true } });
+          return reply.status(409).send({
+            error: `No hay stock suficiente en ${warehouse?.name ?? "ese almacén"} (${current} u.)`,
+          });
+        }
       }
     }
 
