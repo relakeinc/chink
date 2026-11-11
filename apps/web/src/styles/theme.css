@@ -103,3 +103,62 @@
 [data-theme="halloween"] .logo-light {
   display: none;
 }
+
+/* Botones Trell — copia exacta de relake-site para la landing pública. */
+.trell-btn-primary {
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background-color: #2563eb;
+  background-image: linear-gradient(to bottom, #4d88f5, #2563eb);
+  padding-inline: 1.5rem;
+  padding-block: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1), 0 0 0 calc(1px + 0px) rgba(37, 99, 235, 0.2);
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.trell-btn-primary:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.15), 0 0 0 calc(1px + 0px) rgba(37, 99, 235, 0.3);
+}
+
+.trell-btn-primary:active {
+  transform: scale(0.985);
+}
+
+.trell-btn-secondary {
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #d4d4d4;
+  background-color: #fff;
+  padding-inline: 1.5rem;
+  padding-block: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #27272a;
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.trell-btn-secondary:hover {
+  background-color: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+.trell-btn-secondary:active {
+  transform: scale(0.985);
+}

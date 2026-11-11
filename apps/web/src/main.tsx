@@ -1,10 +1,11 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import { RouterProvider, createBrowserRouter, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/lib/theme";
 import AppLayout from "@/components/layout/AppLayout";
 import RequireAuth from "@/components/layout/RequireAuth";
+import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Registro from "@/pages/Registro";
 import Activar from "@/pages/Activar";
@@ -22,6 +23,8 @@ import "super-beautiful-toast/style.css";
 import "@/styles/index.css";
 
 const router = createBrowserRouter([
+  // Landing pública en la ruta principal: si hay sesión, ella redirige a /inicio.
+  { path: "/", element: <Landing /> },
   { path: "/login", element: <Login /> },
   { path: "/registro", element: <Registro /> },
   {
@@ -29,10 +32,8 @@ const router = createBrowserRouter([
     children: [
       { path: "activar", element: <Activar /> },
       {
-        path: "/",
         element: <AppLayout />,
         children: [
-          { index: true, element: <Inicio /> },
           { path: "inicio", element: <Inicio /> },
           { path: "inventario", element: <Inventario /> },
           { path: "movimientos", element: <Movimientos /> },
@@ -41,11 +42,12 @@ const router = createBrowserRouter([
           { path: "reportes", element: <Reportes /> },
           { path: "equipo", element: <Equipo /> },
           { path: "configuracion", element: <Configuracion /> },
-          { path: "*", element: <Inicio /> },
+          { path: "*", element: <Navigate to="/inicio" replace /> },
         ],
       },
     ],
   },
+  { path: "*", element: <Navigate to="/" replace /> },
 ]);
 
 createRoot(document.getElementById("root")!).render(
