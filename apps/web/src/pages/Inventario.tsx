@@ -290,7 +290,7 @@ export default function Inventario() {
     {
       key: "stock",
       header: "Stock ↕",
-      width: "w-[64px]",
+      width: "hidden w-[64px] sm:block",
       align: "right",
       render: (row) => (
         <span
@@ -305,7 +305,7 @@ export default function Inventario() {
     {
       key: "reserved",
       header: "Reservado",
-      width: "w-[68px]",
+      width: "hidden w-[68px] sm:block",
       align: "right",
       render: (row) => (
         <span className={`text-[11px] ${isSelected(row.id) ? "text-accent-text" : "text-muted"}`}>{formatInt(row.reserved)}</span>
@@ -317,7 +317,7 @@ export default function Inventario() {
           {
             key: "unitCost",
             header: "Coste / ud.",
-            width: "w-[92px]",
+            width: "hidden w-[92px] sm:block",
             align: "right" as const,
             render: (row: Product) => (
               <span className={`text-[11px] ${isSelected(row.id) ? "text-accent-text" : "text-muted-2"}`}>
@@ -332,7 +332,7 @@ export default function Inventario() {
           {
             key: "totalValue",
             header: "Valor total",
-            width: "w-[110px]",
+            width: "hidden w-[110px] sm:block",
             align: "right" as const,
             render: (row: Product) => (
               <span className={`text-[11px] ${isSelected(row.id) ? "text-accent-text" : "text-ink"}`}>
@@ -344,7 +344,7 @@ export default function Inventario() {
     {
       key: "status",
       header: "Estado",
-      width: "w-[100px]",
+      width: "hidden w-[100px] sm:block",
       render: (row) => (
         <Badge tone={row.status === "LOW_STOCK" ? "warn" : "success"}>
           {row.status === "LOW_STOCK" ? "Stock bajo" : "En stock"}

@@ -38,8 +38,8 @@ export default function KpiStrip({ items, tileLast = false }: KpiStripProps) {
 
         if (tileLast && isLast) {
           return (
-            <div key={item.label} className="min-w-px flex-1 md:pl-[20px]">
-              <div className="anim-fade-up anim-delay flex h-full items-center justify-center rounded-[8px] bg-subtle px-[12px] text-center" style={{ "--anim-delay": delay } as React.CSSProperties}>
+              <div key={item.label} className="min-w-px flex-1 md:pl-[20px]">
+              <div className="anim-fade-up anim-delay flex h-full flex-col items-center justify-center rounded-[8px] bg-subtle px-[12px] text-center" style={{ "--anim-delay": delay } as React.CSSProperties}>
                 {body}
               </div>
             </div>
