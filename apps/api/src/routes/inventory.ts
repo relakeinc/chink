@@ -107,6 +107,7 @@ const productPatchSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
+    stock: { type: "integer", minimum: 0 },
     name: { type: "string", minLength: 1 },
     category: { type: "string", minLength: 1 },
     reserved: { type: "integer", minimum: 0 },
@@ -417,6 +418,10 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       icon: string;
       imageKey: string | null;
     }>;
+
+    if (Object.prototype.hasOwnProperty.call(request.body, "stock")) {
+      return reply.status(400).send({ error: "El stock solo puede modificarse mediante un movimiento de ajuste" });
+    }
 
     const reserved = body.reserved ?? existing.reserved;
     const unitCost = body.unitCost ?? Number(existing.unitCost);

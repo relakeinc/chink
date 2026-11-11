@@ -29,6 +29,7 @@
     "@types/pdfkit": "^0.17.6",
     "dotenv-cli": "^7.4.4",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^5.1.0"
   }
 }
