@@ -29,8 +29,8 @@ export default function KpiStrip({ items, tileLast = false }: KpiStripProps) {
         const body = (
           <>
             <span className="text-[9px] font-semibold leading-normal text-muted">{item.label}</span>
-            <span className="mt-[6px] flex flex-col items-start gap-[2px] md:flex-row md:items-baseline md:gap-[12px]">
-              <span className="font-outfit text-[22px] leading-[1.3] font-semibold text-ink">{item.value}</span>
+            <span className={`mt-[6px] flex flex-col gap-[2px] ${isLast ? "items-center text-center" : "items-start"}`}>
+              <span className={`font-outfit leading-[1.3] font-semibold text-ink ${isLast ? "whitespace-nowrap text-[20px]" : "text-[22px]"}`}>{item.value}</span>
               {item.context ? <span className="text-[11px] leading-[1.4] text-muted">{item.context}</span> : null}
             </span>
           </>
