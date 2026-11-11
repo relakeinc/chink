@@ -61,8 +61,8 @@ export function SearchInput({ value, onChange, placeholder, width = 300, inputRe
 
   return (
     <div
-      className="flex max-w-full shrink-0 items-center gap-[8px] rounded-[6px] border border-edge bg-subtle px-[12px]"
-      style={fluid ? { height: 36, width: "100%" } : { height: 36, width }}
+      className="search-input flex max-w-full shrink-0 items-center gap-[8px] rounded-[6px] border border-edge bg-subtle px-[12px]"
+      style={{ height: 36, width: fluid ? "100%" : undefined, "--search-width": `${width}px` } as React.CSSProperties}
     >
       <Icon name="search-sm" size={14} />
       <input

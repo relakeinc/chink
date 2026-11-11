@@ -41,7 +41,7 @@ export default function Tabs({ items, active, onChange, gap = 24, children }: Ta
   }, [active, items.length]);
 
   return (
-    <div className="flex h-[50px] shrink-0 items-center overflow-x-auto border-b border-edge px-[20px]" style={{ gap }}>
+    <div className="tabs-scroll flex h-[50px] shrink-0 items-center overflow-x-auto border-b border-edge px-[12px] sm:px-[20px]" style={{ gap }}>
       <div ref={listRef} className="relative flex h-full shrink-0 items-center" style={{ gap }}>
         {items.map((item) => {
           const isActive = item.id === active;

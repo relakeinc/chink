@@ -71,7 +71,7 @@ export function KpiValue({ value, format, duration }: { value: number; format: (
 
 export function PageFooter({ left, right }: { left: ReactNode; right: ReactNode }) {
   return (
-    <div className="flex items-center justify-between px-[10px] text-[10px] leading-[1.4] text-line-strong">
+    <div className="flex flex-wrap items-center justify-between gap-x-[16px] gap-y-[4px] px-[10px] text-[10px] leading-[1.4] text-line-strong">
       <span>{left}</span>
       <span>{right}</span>
     </div>

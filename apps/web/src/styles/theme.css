@@ -49,6 +49,12 @@
   --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+@media (max-width: 639px) {
+  .search-input { width: 100% !important; }
+  .tabs-scroll { scrollbar-width: none; }
+  .tabs-scroll::-webkit-scrollbar { display: none; }
+}
+
 /*
  * Tema oscuro. Conserva los acentos verdes y naranjas de Chink.
  */

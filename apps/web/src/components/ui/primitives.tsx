@@ -101,7 +101,7 @@ export function Card({ className = "", children }: { className?: string; childre
 
 export function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-[16px]">
+    <div className="flex flex-wrap items-start justify-between gap-[10px] sm:gap-[16px]">
       <div className="min-w-0">
         <h2 className="font-outfit text-[17px] leading-[1.4] font-semibold text-ink">{title}</h2>
         {subtitle ? <p className="mt-[4px] text-[11px] leading-[1.4] text-muted">{subtitle}</p> : null}

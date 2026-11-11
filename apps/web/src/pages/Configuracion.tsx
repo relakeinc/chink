@@ -337,7 +337,7 @@ export default function Configuracion() {
         )}
       </Card>
 
-      <PageFooter left={`Última actualización: ${new Date(original.updatedAt).toLocaleString("es-CO")}`} right="Datos de ejemplo · COP" />
+      <PageFooter left={`Actualizado: ${new Date(original.updatedAt).toLocaleString("es-CO")}`} right="COP" />
       {/* Aire inferior: el pie no debe quedar pegado al borde del panel. */}
       <div className="h-[24px]" />
     </>
