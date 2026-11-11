@@ -481,7 +481,7 @@ export default function Inventario() {
 
       <PageFooter
         left="Valoración a coste medio ponderado · Importes sin IVA"
-        right={`Datos de ejemplo · COP · ${formatPercent((summary.available / summary.totalStock) * 100)} disponible`}
+        right={`Datos de ejemplo · COP · ${formatPercent(summary.totalStock > 0 ? (summary.available / summary.totalStock) * 100 : 0)} disponible`}
       />
 
       <AddProductModal open={showAdd} onClose={() => setShowAdd(false)} onCreated={load} />

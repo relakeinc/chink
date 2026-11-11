@@ -38,6 +38,7 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
       lowStock: await prisma.product.count({ where: { status: "LOW_STOCK", archived: false, workspaceId: ws } }),
       lowStockUnits: await prisma.product.aggregate({ _sum: { stock: true }, where: { status: "LOW_STOCK", archived: false, workspaceId: ws } }),
       totalProducts: await prisma.product.count({ where: { archived: false, workspaceId: ws } }),
+      totalMovements: groups.reduce((total, group) => total + group._count, 0),
     };
   });
 
@@ -97,7 +98,7 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
     return {
       data: [
         { name: "Inventario actual", scope: "Stock físico, disponible y reservado", cutoff: stamp, content: `${productCount} productos · ${(totals._sum.stock ?? 0).toLocaleString("es-CO")} u.`, format: "CSV / PDF" },
-        { name: "Historial de movimientos", scope: "Entradas, salidas, transferencias y ajustes", cutoff: "9–15 oct 2026", content: `${movements} movimientos confirmados`, format: "CSV / PDF" },
+        { name: "Historial de movimientos", scope: "Entradas, salidas, transferencias y ajustes", cutoff: stamp, content: `${movements} movimientos confirmados`, format: "CSV / PDF" },
         { name: "Productos con stock bajo", scope: "Existencias frente al mínimo por producto", cutoff: stamp, content: `${lowStock} productos en alerta`, format: "CSV / PDF" },
         { name: "Existencias por almacén", scope: "Distribución y ocupación de ubicaciones", cutoff: stamp, content: `${warehouses} almacenes activos`, format: "CSV / PDF" },
       ],

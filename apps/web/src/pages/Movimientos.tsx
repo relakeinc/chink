@@ -230,7 +230,7 @@ export default function Movimientos() {
 
         <div className="flex items-center justify-between px-[20px] py-[16px]">
           <span className="text-[11px] text-muted">
-            Mostrando {rows.length} de {list.data?.meta.total ?? 0} movimientos · 9–15 octubre 2026
+            Mostrando {rows.length} de {list.data?.meta.total ?? 0} movimientos
           </span>
           <Pagination page={page} totalPages={list.data?.meta.totalPages ?? 1} onChange={setPage} />
         </div>

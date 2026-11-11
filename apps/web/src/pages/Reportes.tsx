@@ -37,7 +37,7 @@ export default function Reportes() {
         {
           label: "STOCK AL CIERRE",
           value: <KpiValue value={s.closing} format={formatUnits} />,
-          context: s.cutoff ? `15 oct · ${s.cutoff.slice(11, 16)}` : undefined,
+          context: s.cutoff ? new Date(s.cutoff).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }) : undefined,
         },
         { label: "ENTRADAS DEL PERÍODO", value: <KpiValue value={s.entries} format={formatUnits} /> },
         { label: "SALIDAS DEL PERÍODO", value: <KpiValue value={s.exits} format={formatUnits} /> },
@@ -129,7 +129,7 @@ export default function Reportes() {
       <div className="flex flex-col gap-[20px]">
         <div className="flex flex-col gap-[20px] xl:flex-row">
           <Card className="flex w-full min-w-0 flex-col gap-[20px] p-[20px] xl:w-[1090px] xl:shrink-0">
-            <SectionHeader title="Entradas y salidas" subtitle="9–15 octubre 2026 · Todos los almacenes" action={<span className="text-[11px] font-semibold text-ink">{reports.length ? "12 movimientos" : ""}</span>} />
+            <SectionHeader title="Entradas y salidas" subtitle="Todos los almacenes" action={<span className="text-[11px] font-semibold text-ink">{reports.length ? `${summary?.totalMovements ?? 0} movimientos` : ""}</span>} />
             {weekly.loading ? <LoadingBlock variant="text" /> : <BarChart data={weekly.data?.data ?? []} max={chartMax} />}
             {s ? (
               <div className="flex justify-between border-t border-edge pt-[12px] text-[11px] leading-[1.4]">
