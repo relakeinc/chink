@@ -41,7 +41,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     await prisma.user.update({ where: { id: user.id }, data: { lastAccessAt: new Date() } });
 
     return {
-      token: app.jwt.sign(session, { expiresIn: "7d" }),
+      token: app.jwt.sign(session, { expiresIn: "12h" }),
       user: session,
       permissions,
       mustActivate,
@@ -128,7 +128,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const { session, permissions } = await membershipSession(created.id);
 
       return reply.status(201).send({
-        token: app.jwt.sign(session, { expiresIn: "7d" }),
+        token: app.jwt.sign(session, { expiresIn: "12h" }),
         user: session,
         permissions,
         mustActivate: false,
@@ -221,7 +221,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const { session, permissions } = await membershipSession(user.id);
 
       return {
-        token: app.jwt.sign(session, { expiresIn: "7d" }),
+        token: app.jwt.sign(session, { expiresIn: "12h" }),
         user: session,
         permissions,
       };

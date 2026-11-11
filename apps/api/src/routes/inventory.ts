@@ -418,11 +418,10 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       imageKey: string | null;
     }>;
 
-    const stock = body.stock ?? existing.stock;
     const reserved = body.reserved ?? existing.reserved;
     const unitCost = body.unitCost ?? Number(existing.unitCost);
     const minStock = body.minStock ?? existing.minStock;
-    const status = body.status ?? (minStock > 0 && stock <= minStock ? "LOW_STOCK" : "IN_STOCK");
+    const status = body.status ?? (minStock > 0 && existing.stock <= minStock ? "LOW_STOCK" : "IN_STOCK");
 
     let imageKey = existing.imageKey;
     let imageUrl = existing.imageUrl;
@@ -446,11 +445,10 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       data: {
         name: body.name,
         category: body.category,
-        stock,
         reserved,
         unitCost,
         minStock,
-        totalValue: Number((stock * unitCost).toFixed(2)),
+        totalValue: Number((existing.stock * unitCost).toFixed(2)),
         status,
         icon: body.icon,
         archived: body.archived,
