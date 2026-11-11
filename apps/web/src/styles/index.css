@@ -70,11 +70,11 @@
   }
 
   /* El indicador nativo del calendario hereda el esquema claro del diseño;
-   * en Halloween (fondo oscuro) pasa a esquema oscuro para seguir visible. */
+   * en modo oscuro pasa a esquema oscuro para seguir visible. */
   :where(:root) {
     color-scheme: light;
   }
-  [data-theme="halloween"] {
+  [data-theme="dark"] {
     color-scheme: dark;
   }
 

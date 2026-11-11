@@ -2,24 +2,13 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
-export type ThemeSetting = "light" | "halloween" | "auto";
-export type EffectiveTheme = "light" | "halloween";
+export type ThemeSetting = "light" | "dark";
+export type EffectiveTheme = ThemeSetting;
 
-/** Temporada Halloween: 15 de octubre → 5 de noviembre (inclusive). */
-export function inHalloweenSeason(now: Date = new Date()): boolean {
-  const m = now.getMonth() + 1;
-  const d = now.getDate();
-  return (m === 10 && d >= 15) || (m === 11 && d <= 5);
-}
-
-export function resolveTheme(setting: ThemeSetting | undefined, now: Date = new Date()): EffectiveTheme {
-  if (setting === "halloween") return "halloween";
-  if (setting === "light") return "light";
-  return inHalloweenSeason(now) ? "halloween" : "light";
-}
+export function resolveTheme(setting: ThemeSetting | undefined): EffectiveTheme { return setting === "dark" ? "dark" : "light"; }
 
 interface ThemeApi {
-  /** Valor guardado en el espacio (o "auto" si no hay sesión). */
+  /** Valor guardado en el espacio. */
   setting: ThemeSetting;
   /** Tema aplicado en el DOM. */
   theme: EffectiveTheme;
@@ -29,7 +18,7 @@ interface ThemeApi {
 }
 
 const ThemeContext = createContext<ThemeApi>({
-  setting: "auto",
+  setting: "light",
   theme: "light",
   setTheme: async () => {},
   refresh: async () => {},
@@ -45,17 +34,17 @@ export function useTheme(): ThemeApi {
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [setting, setSetting] = useState<ThemeSetting>("auto");
-  const [theme, setEffective] = useState<EffectiveTheme>(() => resolveTheme("auto"));
+  const [setting, setSetting] = useState<ThemeSetting>("light");
+  const [theme, setEffective] = useState<EffectiveTheme>(() => resolveTheme("light"));
 
   const refresh = useCallback(async () => {
     if (!user) {
-      setSetting("auto");
+      setSetting("light");
       return;
     }
     try {
       const res = await api.getSettings();
-      const next = (res.data?.theme ?? "auto") as ThemeSetting;
+      const next = (res.data?.theme === "dark" ? "dark" : "light") as ThemeSetting;
       setSetting(next);
     } catch {
       /* Sin ajustes: se mantiene el automático. */
@@ -63,7 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    if (theme === "halloween") document.documentElement.dataset.theme = "halloween";
+    if (theme === "dark") document.documentElement.dataset.theme = "dark";
     else delete document.documentElement.dataset.theme;
   }, [theme]);
 

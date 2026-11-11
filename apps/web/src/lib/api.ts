@@ -208,8 +208,8 @@ export interface SettingsData {
   spaceName: string;
   spaceColor: string;
   spaceMark: string;
-  /** Tema visual del espacio: claro, halloween o automático por fechas. */
-  theme: "light" | "halloween" | "auto";
+  /** Tema visual del espacio. */
+  theme: "light" | "dark";
   legalName: string;
   contactEmail: string;
   taxId: string;

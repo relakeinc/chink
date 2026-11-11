@@ -1,7 +1,7 @@
 import { Icon } from "./Icon";
 
 /**
- * Wordmark de Chink: tinta en el tema claro y lima en Halloween.
+ * Wordmark de Chink: tinta en claro y lima en oscuro.
  * Las clases van en el envoltorio porque Icon fija `display:block`
  * en línea y taparía el intercambio por CSS.
  */

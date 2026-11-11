@@ -76,10 +76,6 @@ export default function TopBar() {
       </OverlayPortal>
 
       <span className="min-w-0 flex-1" />
-      <span className="hidden rounded-[4px] bg-surface px-[8px] py-[4px] text-[11px] leading-[1.45] text-muted sm:block">
-        Entorno de ejemplo
-      </span>
-
       <button type="button" aria-label="Buscar en la página actual" onClick={() => window.dispatchEvent(new Event("chink:focus-search"))} className="pressable flex shrink-0 items-center rounded-[6px]">
         <Icon name="search-lg" size={18} />
       </button>

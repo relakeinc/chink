@@ -234,7 +234,7 @@ model WorkspaceSetting {
   spaceColor   String @default("#242722")
   /// Icono del espacio (galería `workspace-*` en assets/icons, sin extensión).
   spaceMark    String @default("workspace-mark")
-  /// Tema visual: "auto" (halloween en temporada), "light" o "halloween" forzado.
+  /// Tema visual: "light" o "dark".
   theme        String @default("auto")
   legalName    String
   contactEmail String

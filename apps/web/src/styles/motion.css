@@ -186,7 +186,7 @@
 }
 
 /*
- * Halloween: flotación suave para la decoración temporal.
+ * Animaciones suaves para elementos decorativos.
  * Solo existe cuando el tema está activo (los nodos no se montan si no).
  */
 @keyframes hw-float {

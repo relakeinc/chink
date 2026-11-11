@@ -38,15 +38,14 @@ const SECTIONS = [
   },
   {
     title: "Apariencia",
-    description: "Tema visual de la aplicación para todo el equipo. Halloween es temporal y no toca tus datos.",
+    description: "Tema visual de la aplicación para todo el equipo.",
     fields: ["theme"] as const,
   },
 ];
 
-const THEME_OPTIONS: { id: "auto" | "light" | "halloween"; title: string; description: string }[] = [
-  { id: "auto", title: "Automático", description: "Halloween solo en temporada (15 oct – 5 nov)." },
-  { id: "light", title: "Claro", description: "El Chink de siempre, todo el año." },
-  { id: "halloween", title: "Halloween", description: "Toda la temporada, cuando quieras." },
+const THEME_OPTIONS: { id: "light" | "dark"; title: string; description: string }[] = [
+  { id: "light", title: "Claro", description: "Interfaz clara para trabajar con luz." },
+  { id: "dark", title: "Oscuro", description: "Interfaz oscura con los acentos de Chink." },
 ];
 
 const LABELS: Record<string, string> = {
@@ -68,7 +67,7 @@ const LABELS: Record<string, string> = {
 
 const HELPERS: Record<string, string> = {
   spaceMark: "Al crear el espacio se asigna uno al azar. Puedes cambiarlo aquí.",
-  theme: "Automático activa Halloween solo en temporada (15 oct – 5 nov).",
+  theme: "Elige entre el modo claro y el modo oscuro.",
   movementPrefix: "Numeración correlativa automática.",
   defaultMinStock: "Solo para nuevos productos. Los mínimos actuales no cambian.",
 };
@@ -196,7 +195,7 @@ export default function Configuracion() {
                           {field === "theme" ? (
                             <span className="grid grid-cols-1 gap-[8px] sm:grid-cols-3" role="group" aria-label="Tema de la aplicación">
                               {THEME_OPTIONS.map((option) => {
-                                const active = String(values.theme ?? "auto") === option.id;
+                                const active = String(values.theme ?? "light") === option.id;
                                 return (
                                   <button
                                     key={option.id}
@@ -212,16 +211,12 @@ export default function Configuracion() {
                                       className="flex h-[32px] w-[44px] shrink-0 items-center justify-center rounded-[6px] border border-edge"
                                       style={{
                                         background:
-                                          option.id === "light"
-                                            ? "#F5F5EF"
-                                            : option.id === "halloween"
-                                              ? "#16161A"
-                                              : "linear-gradient(135deg, #F5F5EF 50%, #16161A 50%)",
+                                          option.id === "light" ? "#F5F5EF" : "#16161A",
                                       }}
                                     >
                                       <span
                                         className="size-[10px] rounded-full"
-                                        style={{ background: option.id === "halloween" ? "#E8641B" : option.id === "light" ? "#242722" : "#CDFA63" }}
+                                        style={{ background: option.id === "dark" ? "#CDFA63" : "#242722" }}
                                       />
                                     </span>
                                     <span className="flex min-w-0 flex-col">

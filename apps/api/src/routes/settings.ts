@@ -9,7 +9,7 @@ const body = {
     spaceName: { type: "string" },
     spaceColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
     spaceMark: { type: "string", pattern: "^[a-z0-9-]+$" },
-    theme: { type: "string", enum: ["light", "halloween", "auto"] },
+    theme: { type: "string", enum: ["light", "dark"] },
     legalName: { type: "string" },
     contactEmail: { type: "string" },
     taxId: { type: "string" },

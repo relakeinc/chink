@@ -28,7 +28,7 @@
   --color-accent: #cdfa63;
   --color-accent-text: #a3c97a;
 
-  /* Salidas del gráfico de barras (naranja solo en Halloween). */
+  /* Salidas del gráfico de barras. */
   --color-exits: #2d332b;
 
   /* Estados */
@@ -50,10 +50,9 @@
 }
 
 /*
- * Tema Halloween (temporal, por festividades). Solo re-mapea tokens: el
- * tema claro queda intacto. Se activa con data-theme="halloween" en <html>.
+ * Tema oscuro. Conserva los acentos verdes y naranjas de Chink.
  */
-[data-theme="halloween"] {
+[data-theme="dark"] {
   --color-canvas: #16161a;
   --color-subtle: #0b0b0d;
   --color-surface: #202026;
@@ -71,36 +70,36 @@
   --color-online: #6fae72;
 }
 
-/* Iconos de un solo tono oscuro: se aclaran solo en Halloween. */
-[data-theme="halloween"] [data-icon="nav-inicio"],
-[data-theme="halloween"] [data-icon="nav-inventario"],
-[data-theme="halloween"] [data-icon="nav-movimientos"],
-[data-theme="halloween"] [data-icon="nav-almacenes"],
-[data-theme="halloween"] [data-icon="nav-reportes"],
-[data-theme="halloween"] [data-icon="nav-pagos"],
-[data-theme="halloween"] [data-icon="nav-equipo"],
-[data-theme="halloween"] [data-icon="nav-config"],
-[data-theme="halloween"] [data-icon="logout"],
-[data-theme="halloween"] [data-icon="chevron-down-ink"],
-[data-theme="halloween"] [data-icon="grid-apps"],
-[data-theme="halloween"] [data-icon="warehouse-box"],
-[data-theme="halloween"] [data-icon="workspace-mark"] {
+/* Iconos de un solo tono oscuro: se aclaran en modo oscuro. */
+[data-theme="dark"] [data-icon="nav-inicio"],
+[data-theme="dark"] [data-icon="nav-inventario"],
+[data-theme="dark"] [data-icon="nav-movimientos"],
+[data-theme="dark"] [data-icon="nav-almacenes"],
+[data-theme="dark"] [data-icon="nav-reportes"],
+[data-theme="dark"] [data-icon="nav-pagos"],
+[data-theme="dark"] [data-icon="nav-equipo"],
+[data-theme="dark"] [data-icon="nav-config"],
+[data-theme="dark"] [data-icon="logout"],
+[data-theme="dark"] [data-icon="chevron-down-ink"],
+[data-theme="dark"] [data-icon="grid-apps"],
+[data-theme="dark"] [data-icon="warehouse-box"],
+[data-theme="dark"] [data-icon="workspace-mark"] {
   filter: brightness(0) invert(0.93);
 }
 
-/* Enlaces de acción ("Ver reportes →"): naranja solo en Halloween. */
-[data-theme="halloween"] .link-action {
+/* Enlaces de acción: naranja en modo oscuro. */
+[data-theme="dark"] .link-action {
   color: var(--color-exits);
 }
 
-/* Logo de marca: versión lima en Halloween. */
+/* Logo de marca: versión lima en modo oscuro. */
 .logo-dark {
   display: none;
 }
-[data-theme="halloween"] .logo-dark {
+[data-theme="dark"] .logo-dark {
   display: inline-flex;
 }
-[data-theme="halloween"] .logo-light {
+[data-theme="dark"] .logo-light {
   display: none;
 }
 

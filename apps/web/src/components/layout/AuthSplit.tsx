@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
-import { HalloweenDecor } from "@/components/halloween/HalloweenDecor";
 import { workspaceMark } from "@/lib/workspace";
 
 interface AuthSplitProps {
@@ -38,7 +37,6 @@ export default function AuthSplit({ title, description, children, asideCta }: Au
       </div>
 
       <div className="relative hidden overflow-hidden bg-coal lg:block">
-        <HalloweenDecor variant="auth" />
         <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_45%,rgba(205,250,99,0.22),transparent_70%)]" />
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-[20px] p-[48px]">
           <Icon name={workspaceMark(undefined)} size={72} />
