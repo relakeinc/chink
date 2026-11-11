@@ -253,6 +253,7 @@ export interface ReportSummary {
   lowStock: number;
   lowStockUnits: { stock: number | null };
   totalProducts: number;
+  totalMovements: number;
 }
 
 export interface ExportableReport {
