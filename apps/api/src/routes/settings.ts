@@ -97,7 +97,7 @@ export const settingRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  app.patch("/", { schema: { body } }, async (request, reply) => {
+  app.patch("/", { preHandler: app.requirePermission("admin"), schema: { body } }, async (request, reply) => {
     const ws = await workspaceIdFor(request);
     const current = await prisma.workspaceSetting.findUnique({ where: { id: ws } });
     if (!current) return reply.status(404).send({ error: "Preferencias no inicializadas" });

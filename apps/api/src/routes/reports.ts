@@ -111,6 +111,7 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     "/email",
     {
+      preHandler: app.requirePermission("report"),
       schema: {
         body: {
           type: "object",

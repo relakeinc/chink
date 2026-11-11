@@ -250,7 +250,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
    * bytes: firma una URL PUT por producto, el navegador sube el archivo y
    * después confirma la clave con PATCH. Así el bucket guarda el original.
    */
-  app.post("/product-images/upload-urls", async (request, reply) => {
+  app.post("/product-images/upload-urls", { preHandler: app.requirePermission("adjust") }, async (request, reply) => {
     const body = (request.body ?? {}) as { productIds?: string[]; contentType?: string; size?: number };
     if (!Array.isArray(body.productIds) || body.productIds.length === 0 || body.productIds.length > 50) {
       return reply.status(400).send({ error: "Selecciona entre 1 y 50 productos." });
@@ -275,7 +275,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
   });
 
   /** Alta de producto. Calcula valor total y estado, y abre la existencia en el almacén. */
-  app.post("/products", { schema: { body: productBodySchema } }, async (request, reply) => {
+  app.post("/products", { preHandler: app.requirePermission("register"), schema: { body: productBodySchema } }, async (request, reply) => {
     const body = request.body as {
       sku: string;
       name: string;
@@ -339,7 +339,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
   });
 
   /** Cambio masivo de fotos ya subidas a R2. Actualiza la BD en transacción y luego borra las anteriores. */
-  app.patch("/products/images", async (request, reply) => {
+  app.patch("/products/images", { preHandler: app.requirePermission("adjust") }, async (request, reply) => {
     const body = (request.body ?? {}) as { items?: { id?: string; imageKey?: string | null }[] };
     if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50) {
       return reply.status(400).send({ error: "Envía entre 1 y 50 productos." });
@@ -385,7 +385,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
     }
   });
 
-  app.patch<{ Params: { id: string } }>("/products/:id", async (request, reply) => {
+  app.patch<{ Params: { id: string } }>("/products/:id", { preHandler: app.requirePermission("adjust") }, async (request, reply) => {
     const ws = await workspaceIdFor(request);
     const existing = await prisma.product.findFirst({ where: { id: request.params.id, workspaceId: ws } });
     if (!existing) return reply.status(404).send({ error: "Producto no encontrado" });

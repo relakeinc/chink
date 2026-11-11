@@ -17,7 +17,7 @@ const createBodySchema = {
 
 export const warehouseRoutes: FastifyPluginAsync = async (app) => {
   /** Alta de almacén. El código debe ser único dentro del espacio. */
-  app.post("/", { schema: { body: createBodySchema } }, async (request, reply) => {
+  app.post("/", { preHandler: app.requirePermission("adjust"), schema: { body: createBodySchema } }, async (request, reply) => {
     const body = request.body as { code: string; name: string; location: string; address?: string; capacity: number };
 
     try {
