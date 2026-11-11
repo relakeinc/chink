@@ -73,7 +73,7 @@ async function nextRef(workspaceId: string) {
 
 export const movementRoutes: FastifyPluginAsync = async (app) => {
   /** Alta de movimiento. Aplica el efecto sobre las existencias por almacén. */
-  app.post("/", { schema: { body: createBodySchema } }, async (request, reply) => {
+  app.post("/", { preHandler: app.requirePermission("register"), schema: { body: createBodySchema } }, async (request, reply) => {
     const body = request.body as {
       type: MovementType;
       productId: string;
@@ -146,14 +146,18 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      const newStock = product.stock + stockDelta;
-
+      const changed = await tx.product.update({
+        where: { id: product.id },
+        data: {
+          stock: { increment: stockDelta },
+        },
+      });
+      const newStock = changed.stock;
       await tx.product.update({
         where: { id: product.id },
         data: {
-          stock: newStock,
-          totalValue: Number((newStock * Number(product.unitCost)).toFixed(2)),
-          status: product.minStock > 0 && newStock <= product.minStock ? "LOW_STOCK" : "IN_STOCK",
+          totalValue: Number((newStock * Number(changed.unitCost)).toFixed(2)),
+          status: changed.minStock > 0 && newStock <= changed.minStock ? "LOW_STOCK" : "IN_STOCK",
         },
       });
 

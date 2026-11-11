@@ -103,6 +103,22 @@ const productBodySchema = {
   },
 } as const;
 
+const productPatchSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    name: { type: "string", minLength: 1 },
+    category: { type: "string", minLength: 1 },
+    reserved: { type: "integer", minimum: 0 },
+    unitCost: { type: "number", minimum: 0 },
+    minStock: { type: "integer", minimum: 0 },
+    status: { type: "string", enum: ["IN_STOCK", "LOW_STOCK"] },
+    archived: { type: "boolean" },
+    icon: { type: "string" },
+    imageKey: { type: "string", nullable: true },
+  },
+} as const;
+
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "P2002";
 }
@@ -385,7 +401,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
     }
   });
 
-  app.patch<{ Params: { id: string } }>("/products/:id", { preHandler: app.requirePermission("adjust") }, async (request, reply) => {
+  app.patch<{ Params: { id: string } }>("/products/:id", { preHandler: app.requirePermission("adjust"), schema: { body: productPatchSchema } }, async (request, reply) => {
     const ws = await workspaceIdFor(request);
     const existing = await prisma.product.findFirst({ where: { id: request.params.id, workspaceId: ws } });
     if (!existing) return reply.status(404).send({ error: "Producto no encontrado" });
@@ -393,7 +409,6 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
     const body = (request.body ?? {}) as Partial<{
       name: string;
       category: string;
-      stock: number;
       reserved: number;
       unitCost: number;
       minStock: number;
