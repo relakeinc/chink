@@ -10,7 +10,7 @@ COPY apps/web/package.json ./apps/web/
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm --filter @chink-saas/db generate \
-  && chmod +x scripts/docker-entrypoint.sh
+  && chmod 755 scripts/docker-entrypoint.sh
 USER node
 EXPOSE 3100
 ENTRYPOINT ["sh", "scripts/docker-entrypoint.sh"]
