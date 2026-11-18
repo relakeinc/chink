@@ -1,8 +1,6 @@
 #!/bin/sh
 # Arranque de prod: migraciones, catálogo de roles y servidor.
-# Ojo: `pnpm --filter` ejecuta con cwd en el paquete, así que las rutas van
-# relativas a apps/api (servidor) o a la raíz vía ../../ (scripts).
 set -e
-pnpm --filter @chink-saas/db exec prisma migrate deploy
-pnpm --filter @chink-saas/api exec tsx ../../scripts/seed-if-empty.ts
-exec pnpm --filter @chink-saas/api exec tsx src/server.ts
+packages/db/node_modules/.bin/prisma migrate deploy --schema packages/db/prisma/schema.prisma
+apps/api/node_modules/.bin/tsx scripts/seed-if-empty.ts
+exec apps/api/node_modules/.bin/tsx apps/api/src/server.ts
