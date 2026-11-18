@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
-import type { ExportableReport, RotationRow } from "@/lib/api";
+import type { ExportableReport, RotationRow, SalesRateRow } from "@/lib/api";
 import { useAsync, ErrorBlock, LoadingBlock } from "@/lib/useAsync";
 import { formatPercent, formatUnits } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
@@ -28,6 +28,7 @@ export default function Reportes() {
   const exports = useAsync(() => api.getExports(), []);
   const weekly = useAsync(() => api.getWeekly(params), [range.from, range.to]);
   const rotation = useAsync(() => api.getRotation(params), [range.from, range.to]);
+  const salesRate = useAsync(() => api.getSalesRate(params), [range.from, range.to]);
 
   const reports: ExportableReport[] = exports.data?.data ?? [];
   const filtered = format ? reports.filter((r) => r.format.includes(format)) : reports;
@@ -114,6 +115,17 @@ export default function Reportes() {
     },
     { key: "units", header: "Unidades", width: "w-[95px]", render: (row) => <span className="text-[13px] font-semibold text-ink">{formatUnits(row.units)}</span> },
     { key: "stock", header: "Stock", width: "w-[80px]", render: (row) => <span className="text-[12px] text-muted">{formatUnits(row.stock)}</span> },
+  ];
+
+  const salesRateColumns: Column<SalesRateRow>[] = [
+    {
+      key: "product",
+      header: "Producto",
+      width: "flex-1 min-w-px",
+      render: (row) => <span className="flex min-w-0 flex-col"><span className="truncate text-[13px] text-ink">{row.name}</span><span className="text-[10px] text-muted">{row.sku}</span></span>,
+    },
+    { key: "days", header: "Se agota en", width: "w-[105px]", render: (row) => <span className="text-[13px] font-semibold text-warn">{row.daysToMinimum !== null && row.daysToMinimum < 1 ? "Hoy" : `${Math.ceil(row.daysToMinimum ?? 0)} días`}</span> },
+    { key: "stock", header: "Stock / mín.", width: "w-[105px]", render: (row) => <span className="text-[12px] text-muted">{row.stock} / {row.minStock}</span> },
   ];
 
   const chartMax = Math.max(400, ...(weekly.data?.data ?? []).flatMap((d) => [d.entries, d.exits]));
@@ -205,6 +217,14 @@ export default function Reportes() {
             {rotation.error ? <ErrorBlock message={rotation.error} onRetry={() => void rotation.reload()} /> : rotation.loading ? <LoadingBlock /> : <DataTable columns={rotationColumns} rows={rotation.data?.slow ?? []} rowKey={(row) => row.productId} rowHeight={48} />}
           </Card>
         </div>
+
+        <Card className="min-w-0 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-[8px] px-[20px] pb-[12px] pt-[18px]">
+            <SectionHeader title="Se agota pronto" subtitle={`Ritmo de ventas de los últimos ${salesRate.data?.period.days ?? 30} días`} />
+            <span className="text-[11px] text-muted">Aviso con {salesRate.data?.warningDays ?? 7} días de anticipación</span>
+          </div>
+          {salesRate.error ? <ErrorBlock message={salesRate.error} onRetry={() => void salesRate.reload()} /> : salesRate.loading ? <LoadingBlock /> : salesRate.data?.data.length ? <DataTable columns={salesRateColumns} rows={salesRate.data.data} rowKey={(row) => row.productId} rowHeight={48} /> : <p className="px-[20px] pb-[20px] text-[12px] text-muted">No hay productos con riesgo de agotarse en este período.</p>}
+        </Card>
 
         <Card className="overflow-hidden">
           <div className="flex h-[58px] items-center justify-between px-[20px]">

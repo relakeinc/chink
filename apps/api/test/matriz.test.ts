@@ -468,6 +468,20 @@ describe("RF09 - Reporte de rotación", () => {
   });
 });
 
+describe("RF08 - Alerta por ritmo de ventas", () => {
+  test("CP025 avisa antes de que el ritmo de ventas alcance el mínimo", async () => {
+    const s = await espacioNuevo();
+    const p = await crearProducto(s.token, s.warehouseId, { name: "Producto por agotarse", stock: 5, minStock: 1 });
+    await api("POST", "/api/movements", s.token, { type: "EXIT", productId: p.body.data.id, quantity: 4, originId: s.warehouseId });
+    const r = await api("GET", "/api/reports/sales-rate?warningDays=8", s.token);
+    anotar("CP025", `La alerta devuelve ${r.body.data.length} producto(s) con ritmo de venta peligroso.`);
+    expect(r.status).toBe(200);
+    expect(r.body.data[0].name).toBe("Producto por agotarse");
+    expect(r.body.data[0].averageDaily).toBeGreaterThan(0);
+    expect(r.body.data[0].daysToMinimum).toBeLessThanOrEqual(8);
+  });
+});
+
 describe("RNF02 / RNF03 - Seguridad y rendimiento", () => {
   test("CP047 la contraseña se guarda cifrada", async () => {
     const s = await espacioNuevo();

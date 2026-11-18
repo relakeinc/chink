@@ -121,6 +121,36 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
     return { period: { from: from.toISOString(), to: to.toISOString(), days }, top: rows.toSorted(sortMost).slice(0, 10), slow: rows.toSorted(sortLeast).slice(0, 10) };
   });
 
+  /** Alerta preventiva: productos que llegarán al mínimo pronto según sus salidas. */
+  app.get("/sales-rate", async (request) => {
+    const query = request.query as { from?: string; to?: string; warningDays?: string };
+    const ws = await workspaceIdFor(request);
+    const now = new Date();
+    const defaultFrom = new Date(now);
+    defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 29);
+    const from = periodDate(query.from, defaultFrom);
+    const to = query.to ? new Date(`${query.to}T23:59:59.999Z`) : now;
+    const warningDays = Math.min(90, Math.max(1, Number(query.warningDays ?? 7) || 7));
+    const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86_400_000));
+    const [products, exits] = await Promise.all([
+      prisma.product.findMany({ where: { workspaceId: ws, archived: false }, select: { id: true, sku: true, name: true, stock: true, minStock: true } }),
+      prisma.stockMovement.findMany({ where: { workspaceId: ws, type: "EXIT", createdAt: { gte: from, lte: to } }, select: { productId: true, quantity: true } }),
+    ]);
+    const sold = new Map<string, number>();
+    for (const exit of exits) sold.set(exit.productId, (sold.get(exit.productId) ?? 0) + Math.abs(exit.quantity));
+    const alerts = products
+      .map((product) => {
+        const unitsSold = sold.get(product.id) ?? 0;
+        const averageDaily = unitsSold / days;
+        const unitsUntilMinimum = Math.max(product.stock - product.minStock, 0);
+        const daysToMinimum = averageDaily > 0 ? unitsUntilMinimum / averageDaily : null;
+        return { productId: product.id, sku: product.sku, name: product.name, stock: product.stock, minStock: product.minStock, unitsSold, averageDaily, daysToMinimum };
+      })
+      .filter((row) => row.averageDaily > 0 && (row.stock <= row.minStock || (row.daysToMinimum !== null && row.daysToMinimum <= warningDays)))
+      .sort((a, b) => (a.daysToMinimum ?? 0) - (b.daysToMinimum ?? 0));
+    return { period: { from: from.toISOString(), to: to.toISOString(), days }, warningDays, data: alerts };
+  });
+
   /** Reportes exportables. */
   app.get("/exports", async (request) => {    const ws = await workspaceIdFor(request);
     const [totals, movements, lowStock, warehouses] = await Promise.all([

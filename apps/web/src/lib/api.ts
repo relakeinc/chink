@@ -277,6 +277,17 @@ export interface RotationRow {
   movements: number;
 }
 
+export interface SalesRateRow {
+  productId: string;
+  sku: string;
+  name: string;
+  stock: number;
+  minStock: number;
+  unitsSold: number;
+  averageDaily: number;
+  daysToMinimum: number | null;
+}
+
 export interface ExportableReport {
   name: string;
   scope: string;
@@ -416,6 +427,8 @@ export const api = {
     request<{ data: { name: string; sku: string; minStock: number; stock: number; imageUrl: string | null }[] }>("/api/reports/low-stock"),
   getRotation: (params?: QueryParams) =>
     request<{ period: { from: string; to: string; days: number }; top: RotationRow[]; slow: RotationRow[] }>("/api/reports/rotation", { params }),
+  getSalesRate: (params?: QueryParams) =>
+    request<{ period: { from: string; to: string; days: number }; warningDays: number; data: SalesRateRow[] }>("/api/reports/sales-rate", { params }),
 
   /* Pagos (comprobantes del espacio) */
   getPagos: (params?: QueryParams) =>
