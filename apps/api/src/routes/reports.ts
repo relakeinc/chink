@@ -6,6 +6,10 @@ import { workspaceIdFor } from "../lib/workspace-scope.js";
 
 const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
+function periodDate(value: string | undefined, fallback: Date): Date {
+  return value ? new Date(`${value}T00:00:00.000Z`) : fallback;
+}
+
 export const reportRoutes: FastifyPluginAsync = async (app) => {
   /** KPIs de la cabecera de Reportes. */
   app.get("/summary", async (request) => {
@@ -80,6 +84,41 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
       orderBy: { position: "asc" },
     });
     return { data: products.map((p) => ({ name: p.name, sku: p.sku, minStock: p.minStock, stock: p.stock, imageUrl: p.imageUrl })) };
+  });
+
+  /** Productos más y menos vendidos a partir de las salidas del período. */
+  app.get("/rotation", async (request) => {
+    const query = request.query as { from?: string; to?: string };
+    const ws = await workspaceIdFor(request);
+    const now = new Date();
+    const defaultFrom = new Date(now);
+    defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 29);
+    const from = periodDate(query.from, defaultFrom);
+    const to = query.to ? new Date(`${query.to}T23:59:59.999Z`) : now;
+    const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86_400_000));
+    const [products, exits] = await Promise.all([
+      prisma.product.findMany({ where: { workspaceId: ws, archived: false }, select: { id: true, sku: true, name: true, category: true, stock: true } }),
+      prisma.stockMovement.findMany({ where: { workspaceId: ws, type: "EXIT", createdAt: { gte: from, lte: to } }, select: { productId: true, quantity: true } }),
+    ]);
+    const totals = new Map<string, { units: number; movements: number }>();
+    for (const exit of exits) {
+      const current = totals.get(exit.productId) ?? { units: 0, movements: 0 };
+      current.units += Math.abs(exit.quantity);
+      current.movements += 1;
+      totals.set(exit.productId, current);
+    }
+    const rows = products.map((product) => ({
+      productId: product.id,
+      sku: product.sku,
+      name: product.name,
+      category: product.category,
+      stock: product.stock,
+      units: totals.get(product.id)?.units ?? 0,
+      movements: totals.get(product.id)?.movements ?? 0,
+    }));
+    const sortMost = (a: (typeof rows)[number], b: (typeof rows)[number]) => b.units - a.units || a.name.localeCompare(b.name);
+    const sortLeast = (a: (typeof rows)[number], b: (typeof rows)[number]) => a.units - b.units || a.name.localeCompare(b.name);
+    return { period: { from: from.toISOString(), to: to.toISOString(), days }, top: rows.toSorted(sortMost).slice(0, 10), slow: rows.toSorted(sortLeast).slice(0, 10) };
   });
 
   /** Reportes exportables. */

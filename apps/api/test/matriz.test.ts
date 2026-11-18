@@ -453,6 +453,21 @@ describe("RF13 - Quién hizo cada cambio", () => {
   });
 });
 
+describe("RF09 - Reporte de rotación", () => {
+  test("CP026 reporta productos más y menos vendidos en el período", async () => {
+    const s = await espacioNuevo();
+    const mucho = await crearProducto(s.token, s.warehouseId, { name: "Producto con alta rotación", stock: 20 });
+    await crearProducto(s.token, s.warehouseId, { name: "Producto sin salidas", stock: 20 });
+    await api("POST", "/api/movements", s.token, { type: "EXIT", productId: mucho.body.data.id, quantity: 5, originId: s.warehouseId });
+    const r = await api("GET", "/api/reports/rotation", s.token);
+    anotar("CP026", `El reporte devuelve ${r.body.top.length} más vendidos y ${r.body.slow.length} menos vendidos.`);
+    expect(r.status).toBe(200);
+    expect(r.body.top[0].name).toBe("Producto con alta rotación");
+    expect(r.body.top[0].units).toBe(5);
+    expect(r.body.slow.some((row: any) => row.name === "Producto sin salidas" && row.units === 0)).toBe(true);
+  });
+});
+
 describe("RNF02 / RNF03 - Seguridad y rendimiento", () => {
   test("CP047 la contraseña se guarda cifrada", async () => {
     const s = await espacioNuevo();

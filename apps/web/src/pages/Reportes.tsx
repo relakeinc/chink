@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
-import type { ExportableReport } from "@/lib/api";
+import type { ExportableReport, RotationRow } from "@/lib/api";
 import { useAsync, ErrorBlock, LoadingBlock } from "@/lib/useAsync";
 import { formatPercent, formatUnits } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
@@ -27,6 +27,7 @@ export default function Reportes() {
   const categories = useAsync(() => api.getCategories(), []);
   const exports = useAsync(() => api.getExports(), []);
   const weekly = useAsync(() => api.getWeekly(params), [range.from, range.to]);
+  const rotation = useAsync(() => api.getRotation(params), [range.from, range.to]);
 
   const reports: ExportableReport[] = exports.data?.data ?? [];
   const filtered = format ? reports.filter((r) => r.format.includes(format)) : reports;
@@ -102,6 +103,17 @@ export default function Reportes() {
         </span>
       ),
     },
+  ];
+
+  const rotationColumns: Column<RotationRow>[] = [
+    {
+      key: "product",
+      header: "Producto",
+      width: "flex-1 min-w-px",
+      render: (row) => <span className="flex min-w-0 flex-col"><span className="truncate text-[13px] text-ink">{row.name}</span><span className="text-[10px] text-muted">{row.sku}</span></span>,
+    },
+    { key: "units", header: "Unidades", width: "w-[95px]", render: (row) => <span className="text-[13px] font-semibold text-ink">{formatUnits(row.units)}</span> },
+    { key: "stock", header: "Stock", width: "w-[80px]", render: (row) => <span className="text-[12px] text-muted">{formatUnits(row.stock)}</span> },
   ];
 
   const chartMax = Math.max(400, ...(weekly.data?.data ?? []).flatMap((d) => [d.entries, d.exits]));
@@ -180,6 +192,17 @@ export default function Reportes() {
                 </span>
               </div>
             ) : null}
+          </Card>
+        </div>
+
+        <div className="grid min-w-0 grid-cols-1 gap-[20px] xl:grid-cols-2">
+          <Card className="min-w-0 overflow-hidden">
+            <div className="px-[20px] pb-[12px] pt-[18px]"><SectionHeader title="Más vendidos" subtitle={`Salidas en ${rotation.data?.period.days ?? 30} días`} /></div>
+            {rotation.error ? <ErrorBlock message={rotation.error} onRetry={() => void rotation.reload()} /> : rotation.loading ? <LoadingBlock /> : <DataTable columns={rotationColumns} rows={rotation.data?.top ?? []} rowKey={(row) => row.productId} rowHeight={48} />}
+          </Card>
+          <Card className="min-w-0 overflow-hidden">
+            <div className="px-[20px] pb-[12px] pt-[18px]"><SectionHeader title="Menos vendidos" subtitle="Incluye productos sin salidas" /></div>
+            {rotation.error ? <ErrorBlock message={rotation.error} onRetry={() => void rotation.reload()} /> : rotation.loading ? <LoadingBlock /> : <DataTable columns={rotationColumns} rows={rotation.data?.slow ?? []} rowKey={(row) => row.productId} rowHeight={48} />}
           </Card>
         </div>
 

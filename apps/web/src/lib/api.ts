@@ -267,6 +267,16 @@ export interface ReportSummary {
   totalMovements: number;
 }
 
+export interface RotationRow {
+  productId: string;
+  sku: string;
+  name: string;
+  category: string;
+  stock: number;
+  units: number;
+  movements: number;
+}
+
 export interface ExportableReport {
   name: string;
   scope: string;
@@ -404,6 +414,8 @@ export const api = {
   getExports: () => request<{ data: ExportableReport[] }>("/api/reports/exports"),
   getLowStock: () =>
     request<{ data: { name: string; sku: string; minStock: number; stock: number; imageUrl: string | null }[] }>("/api/reports/low-stock"),
+  getRotation: (params?: QueryParams) =>
+    request<{ period: { from: string; to: string; days: number }; top: RotationRow[]; slow: RotationRow[] }>("/api/reports/rotation", { params }),
 
   /* Pagos (comprobantes del espacio) */
   getPagos: (params?: QueryParams) =>
