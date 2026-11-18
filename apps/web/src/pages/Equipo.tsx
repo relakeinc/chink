@@ -13,6 +13,7 @@ import { Icon } from "@/components/ui/Icon";
 import { useNotice } from "@/lib/toast";
 import Modal from "@/components/ui/Modal";
 import { InviteModal } from "@/components/forms/WarehouseModal";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Equipo() {
   const [view, setView] = useState("all");
@@ -26,12 +27,14 @@ export default function Equipo() {
   const [rolesHighlight, setRolesHighlight] = useState(false);
   const rolesRef = useRef<HTMLDivElement>(null);
   const { showNotice } = useNotice();
+  const { can } = useAuth();
   const searchRef = useRef<HTMLInputElement>(null);
   useCommandK(searchRef);
 
   const members = useAsync(() => api.getMembers({ search: search || undefined, warehouse: site || undefined }), [search, site]);
   const matrix = useAsync(() => api.getPermissions(), []);
   const warehouses = useAsync(() => api.getWarehouses(), []);
+  const audit = useAsync(() => (can("admin") ? api.getProductAudit({ pageSize: 50 }) : Promise.resolve({ data: [], meta: { total: 0, page: 1, pageSize: 50, totalPages: 0 } })), [can]);
 
   const all: Member[] = members.data?.data ?? [];
   const rows = all.filter((m) => {
@@ -226,6 +229,28 @@ export default function Equipo() {
     })),
   ];
 
+  const auditColumns: Column<NonNullable<typeof audit.data>["data"][number]>[] = [
+    {
+      key: "createdAt",
+      header: "Fecha",
+      width: "w-[170px]",
+      render: (row) => <span className="text-[12px] text-ink">{new Date(row.createdAt).toLocaleString("es-CO")}</span>,
+    },
+    {
+      key: "product",
+      header: "Producto",
+      width: "flex-1 min-w-px",
+      render: (row) => <span className="flex flex-col"><span className="text-[13px] text-ink">{row.productName}</span><span className="text-[10px] text-muted">{row.productSku}</span></span>,
+    },
+    {
+      key: "action",
+      header: "Acción",
+      width: "w-[130px]",
+      render: (row) => <Badge tone={row.action === "ARCHIVED" ? "alert" : row.action === "CREATED" ? "success" : "neutral"}>{row.action === "CREATED" ? "Creado" : row.action === "ARCHIVED" ? "Archivado" : "Editado"}</Badge>,
+    },
+    { key: "actor", header: "Realizado por", width: "w-[190px]", render: (row) => <span className="flex flex-col"><span className="text-[12px] text-ink">{row.actor.name}</span><span className="text-[10px] text-muted">{row.actor.email}</span></span> },
+  ];
+
   return (
     <>
       <PageHeader
@@ -315,6 +340,19 @@ export default function Equipo() {
             Administración: acceso completo. Los cambios de rol quedan registrados en el historial de actividad.
           </p>
         </div>
+
+        {can("admin") ? (
+          <Card className="flex flex-col overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-[8px] px-[20px] py-[16px]">
+              <div>
+                <h2 className="font-outfit text-[17px] font-semibold text-ink">Historial de productos</h2>
+                <p className="text-[11px] text-muted">Altas, ediciones y archivados con usuario y hora.</p>
+              </div>
+              <Badge tone="neutral">Solo administración</Badge>
+            </div>
+            {audit.error ? <ErrorBlock message={audit.error} onRetry={() => void audit.reload()} /> : audit.loading ? <LoadingBlock /> : <DataTable columns={auditColumns} rows={audit.data?.data ?? []} rowKey={(row) => row.id} rowHeight={48} />}
+          </Card>
+        ) : null}
       </div>
 
       <PageFooter left={`Actualizado: ${new Date().toLocaleString("es-CO")}`} right="COP" />

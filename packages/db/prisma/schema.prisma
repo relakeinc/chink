@@ -61,6 +61,7 @@ model User {
   telegramChats     TelegramChat[]
   registeredPagos   Pago[]           @relation("PagoRegistradoPor")
   linkCodes         CodigoVinculacion[] @relation("CodigoCreador")
+  productAudits     ProductAudit[]
 
   @@index([workspaceId])
   @@map("users")
@@ -167,6 +168,7 @@ model Product {
 
   locations StockLocation[]
   movements StockMovement[]
+  audits    ProductAudit[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -177,6 +179,27 @@ model Product {
   @@unique([workspaceId, sku])
   @@index([workspaceId])
   @@map("products")
+}
+
+/// Historial inmutable de las operaciones administrativas sobre productos.
+model ProductAudit {
+  id          String   @id @default(cuid())
+  workspaceId String
+  productId   String
+  productSku  String
+  productName String
+  action      String
+  changes     Json?
+  actorId     String
+  createdAt   DateTime @default(now())
+
+  workspace WorkspaceSetting @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  product   Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  actor     User             @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([productId, createdAt])
+  @@map("product_audits")
 }
 
 /// Existencias de un producto en cada almacén (pantalla "Existencias por ubicación").
@@ -266,6 +289,7 @@ model WorkspaceSetting {
   pagos       Pago[]
   telegramChats TelegramChat[]
   linkCodes   CodigoVinculacion[]
+  productAudits ProductAudit[]
 
   @@map("workspace_settings")
 }

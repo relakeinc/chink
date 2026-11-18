@@ -326,23 +326,37 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
     const maxPosition = await prisma.product.aggregate({ _max: { position: true }, where: { workspaceId: ws } });
 
     try {
-      const created = await prisma.product.create({
-        data: {
-          sku: body.sku,
-          name: body.name,
-          category: body.category,
-          stock: body.stock,
-          reserved,
-          unitCost: body.unitCost,
-          totalValue,
-          minStock,
-          status,
-          icon: body.icon ?? "package",
-          position: (maxPosition._max.position ?? 0) + 1,
-          workspaceId: ws,
-          ...(warehouseId ? { locations: { create: { warehouseId, quantity: body.stock, reserved } } } : {}),
-        },
-        include: LOCATIONS,
+      const created = await prisma.$transaction(async (tx) => {
+        const product = await tx.product.create({
+          data: {
+            sku: body.sku,
+            name: body.name,
+            category: body.category,
+            stock: body.stock,
+            reserved,
+            unitCost: body.unitCost,
+            totalValue,
+            minStock,
+            status,
+            icon: body.icon ?? "package",
+            position: (maxPosition._max.position ?? 0) + 1,
+            workspaceId: ws,
+            ...(warehouseId ? { locations: { create: { warehouseId, quantity: body.stock, reserved } } } : {}),
+          },
+          include: LOCATIONS,
+        });
+        await tx.productAudit.create({
+          data: {
+            workspaceId: ws,
+            productId: product.id,
+            productSku: product.sku,
+            productName: product.name,
+            action: "CREATED",
+            changes: { sku: product.sku, name: product.name, category: product.category, unitCost: Number(product.unitCost), minStock: product.minStock },
+            actorId: request.user.id,
+          },
+        });
+        return product;
       });
 
       await publishToWorkspace(ws, { channels: ["inventory"] });
@@ -445,22 +459,56 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       }
     }
 
-    const updated = await prisma.product.update({
-      where: { id: request.params.id },
-      data: {
-        name: body.name,
-        category: body.category,
-        reserved,
-        unitCost,
-        minStock,
-        totalValue: Number((existing.stock * unitCost).toFixed(2)),
-        status,
-        icon: body.icon,
-        archived: body.archived,
-        imageKey,
-        imageUrl,
-      },
-      include: LOCATIONS,
+    const changes: Record<string, Prisma.InputJsonValue> = {};
+    const nextValues = {
+      name: body.name ?? existing.name,
+      category: body.category ?? existing.category,
+      reserved,
+      unitCost,
+      minStock,
+      status,
+      icon: body.icon ?? existing.icon,
+      archived: body.archived ?? existing.archived,
+      imageKey,
+      imageUrl,
+    };
+    for (const key of ["name", "category", "reserved", "unitCost", "minStock", "status", "icon", "archived", "imageKey"] as const) {
+      const from = key === "unitCost" ? Number(existing.unitCost) : existing[key];
+      const to = nextValues[key];
+      if (from !== to) changes[key] = { from: from as Prisma.InputJsonValue, to: to as Prisma.InputJsonValue };
+    }
+    const action = !existing.archived && nextValues.archived ? "ARCHIVED" : "UPDATED";
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const product = await tx.product.update({
+        where: { id: request.params.id },
+        data: {
+          name: body.name,
+          category: body.category,
+          reserved,
+          unitCost,
+          minStock,
+          totalValue: Number((existing.stock * unitCost).toFixed(2)),
+          status,
+          icon: body.icon,
+          archived: body.archived,
+          imageKey,
+          imageUrl,
+        },
+        include: LOCATIONS,
+      });
+      await tx.productAudit.create({
+        data: {
+          workspaceId: ws,
+          productId: product.id,
+          productSku: product.sku,
+          productName: product.name,
+          action,
+          changes: changes as Prisma.InputJsonObject,
+          actorId: request.user.id,
+        },
+      });
+      return product;
     });
 
     if (existing.imageKey && existing.imageKey !== imageKey) {

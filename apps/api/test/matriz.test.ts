@@ -438,6 +438,19 @@ describe("RF13 - Quién hizo cada cambio", () => {
     anotar("CP042", `El movimiento ${fila.ref} aparece con usuario ${fila.owner}, fecha ${fila.date} y hora ${fila.time}.`);
     expect(fila.owner).toBe("Ana López");
   });
+
+  test("CP043 la administración puede consultar altas, ediciones y archivados de productos", async () => {
+    const s = await espacioNuevo();
+    const creado = await crearProducto(s.token, s.warehouseId, { name: "Producto auditado" });
+    const id = creado.body.data.id as string;
+    await api("PATCH", `/api/inventory/products/${id}`, s.token, { name: "Producto auditado editado" });
+    await api("PATCH", `/api/inventory/products/${id}`, s.token, { archived: true });
+    const h = await api("GET", "/api/audit/products", s.token);
+    anotar("CP043", `El historial devuelve ${h.body.data.length} eventos con actor y fecha.`);
+    expect(h.status).toBe(200);
+    expect(h.body.data.slice(0, 3).map((row: any) => row.action)).toEqual(["ARCHIVED", "UPDATED", "CREATED"]);
+    expect(h.body.data[0].actor.email).toContain("pruebas.co");
+  });
 });
 
 describe("RNF02 / RNF03 - Seguridad y rendimiento", () => {

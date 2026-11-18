@@ -204,6 +204,17 @@ export interface RoleMatrix {
   permissions: { id: string; label: string; grants: Record<string, boolean> }[];
 }
 
+export interface ProductAuditRow {
+  id: string;
+  action: "CREATED" | "UPDATED" | "ARCHIVED" | string;
+  productId: string;
+  productSku: string;
+  productName: string;
+  changes: Record<string, { from: unknown; to: unknown }> | null;
+  actor: { name: string; email: string };
+  createdAt: string;
+}
+
 export interface SettingsData {
   spaceName: string;
   spaceColor: string;
@@ -366,6 +377,8 @@ export const api = {
     request<{ data: { id: string; email: string; temporaryPassword: string; emailSent: boolean } }>(`/api/team/invitations/${id}/resend`, {
       method: "POST",
     }),
+  getProductAudit: (params?: QueryParams) =>
+    request<{ data: ProductAuditRow[]; meta: ListMeta }>("/api/audit/products", { params }),
   getSpaces: () =>
     request<{
       data: { id: string; name: string; mark: string; color: string; role: string; status: string; active: boolean }[];

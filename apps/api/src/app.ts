@@ -8,6 +8,7 @@ import { teamRoutes } from "./routes/team.js";
 import { warehouseRoutes } from "./routes/warehouses.js";
 import { movementRoutes } from "./routes/movements.js";
 import { reportRoutes } from "./routes/reports.js";
+import { auditRoutes } from "./routes/audit.js";
 import { settingRoutes } from "./routes/settings.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { streamRoutes } from "./routes/stream.js";
@@ -45,6 +46,7 @@ export async function buildApp() {
       await protectedApp.register(warehouseRoutes, { prefix: "/api/warehouses" });
       await protectedApp.register(movementRoutes, { prefix: "/api/movements" });
       await protectedApp.register(reportRoutes, { prefix: "/api/reports" });
+      await protectedApp.register(auditRoutes, { prefix: "/api/audit" });
       await protectedApp.register(settingRoutes, { prefix: "/api/settings" });
       await protectedApp.register(notificationRoutes, { prefix: "/api/notifications" });
       await protectedApp.register(pagoRoutes, { prefix: "/api/pagos" });
