@@ -21,7 +21,8 @@ export async function buildApp() {
     logger: { level: process.env.LOG_LEVEL ?? "info" },
   });
 
-  await app.register(cors, { origin: true, methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] });
+  if (process.env.NODE_ENV === "production" && !process.env.APP_URL) throw new Error("APP_URL es obligatorio en producción.");
+  await app.register(cors, { origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : true, methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] });
   await registerAuth(app);
 
   app.get("/api/health", async () => ({ status: "ok" }));

@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { emailAssets, invitationEmail, invitationExistingEmail, sendEmail } from "../lib/email.js";
@@ -116,7 +117,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
 
     // Contraseña temporal: la cuenta queda pendiente hasta activarla.
     // El invitado hereda el espacio del equipo que lo invita.
-    const temporaryPassword = crypto.randomUUID().slice(0, 8);
+    const temporaryPassword = randomBytes(18).toString("base64url");
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
     const initials = body.name
@@ -181,7 +182,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
     if (!member) return reply.status(404).send({ error: "Miembro no encontrado" });
     if (member.status !== "PENDING") return reply.status(400).send({ error: "Solo se reenvían invitaciones pendientes" });
 
-    const temporaryPassword = crypto.randomUUID().slice(0, 8);
+    const temporaryPassword = randomBytes(18).toString("base64url");
     await prisma.user.update({
       where: { id: member.id },
       data: { passwordHash: await bcrypt.hash(temporaryPassword, 10), invitedAt: new Date() },

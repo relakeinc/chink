@@ -1,0 +1,10 @@
+[Unit]
+Description=Respaldo diario de Chink
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 UTC
+Persistent=true
+Unit=chink-backup.service
+
+[Install]
+WantedBy=timers.target

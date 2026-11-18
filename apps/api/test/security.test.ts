@@ -31,6 +31,21 @@ test("permisos y membresías se aplican por espacio y en la sesión vigente", as
   const a = await register("admina");
   const b = await register("adminb");
   const worker = await register("worker");
+  const receipt = await prisma.pago.create({ data: {
+    workspaceId: a.user.workspaceId,
+    monto: 1000,
+    imageData: Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]),
+    imageMime: "image/jpeg",
+    imageUrl: "https://public.example/old-receipt.jpg",
+  } });
+  expect((await call("GET", `/api/pagos/${receipt.id}/imagen`)).status).toBe(401);
+  expect((await call("GET", `/api/pagos/${receipt.id}/imagen`, b.token)).status).toBe(404);
+  const privateImage = await app.inject({ method: "GET", url: `/api/pagos/${receipt.id}/imagen`, headers: { authorization: `Bearer ${a.token}` } });
+  expect(privateImage.statusCode).toBe(200);
+  expect(privateImage.headers["cache-control"]).toBe("private, no-store");
+  expect(privateImage.headers["content-type"]).toBe("image/jpeg");
+  const receiptDto = await call("GET", `/api/pagos/${receipt.id}`, a.token);
+  expect(receiptDto.body.data.imagen_url).toBe(`/api/pagos/${receipt.id}/imagen`);
   const operator = await prisma.role.findUniqueOrThrow({ where: { name: "Operador" } });
   const admin = await prisma.role.findUniqueOrThrow({ where: { name: "Administradora" } });
   const report = await prisma.permission.findUniqueOrThrow({ where: { key: "report" } });

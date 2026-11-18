@@ -1,0 +1,8 @@
+[Unit]
+Description=Respaldo de la base de datos Chink
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/chink-saas/scripts/backup-production.sh

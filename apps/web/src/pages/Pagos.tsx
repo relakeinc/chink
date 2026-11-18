@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { api } from "@/lib/api";
+import { api, getPagoImage } from "@/lib/api";
 import type { PagoRow } from "@/lib/api";
 import { useAsync, ErrorBlock, LoadingBlock, useDebounced } from "@/lib/useAsync";
 import { formatCOP, formatInt } from "@/lib/format";
@@ -66,6 +66,24 @@ export default function Pagos() {
 
   const rows: PagoRow[] = list.data?.data ?? [];
   const total = list.data?.meta.total ?? 0;
+
+  async function verComprobante(pago: PagoRow) {
+    const win = window.open("", "_blank");
+    if (!win) {
+      showNotice("El navegador bloqueó la ventana del comprobante.", { variant: "warning" });
+      return;
+    }
+    win.opener = null;
+    try {
+      const blob = await getPagoImage(pago.id);
+      const url = URL.createObjectURL(blob);
+      win.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      win.close();
+      showNotice("No se pudo abrir el comprobante.", { variant: "warning" });
+    }
+  }
 
   function exportCsv() {
     downloadCsv(
@@ -163,9 +181,9 @@ export default function Pagos() {
       render: (p: PagoRow) => (
         <span className="flex items-center gap-[8px]">
           {p.imagen_url ? (
-            <a href={p.imagen_url} target="_blank" rel="noreferrer" className="text-[11px] font-semibold text-ink hover:underline">
+            <button type="button" onClick={() => void verComprobante(p)} className="text-[11px] font-semibold text-ink hover:underline">
               Ver
-            </a>
+            </button>
           ) : null}
           {puedeRegistrar && p.estado !== "verificado" ? (
             <button type="button" onClick={() => void marcarVerificado(p)} className="text-[11px] font-semibold text-ink hover:underline">

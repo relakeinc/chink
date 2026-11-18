@@ -4,8 +4,8 @@ import { workspaceIdFor, activeMembership } from "../lib/workspace-scope.js";
 import { permissionAllowed } from "../lib/permissions.js";
 import { notifyUser } from "./notifications.js";
 import { publishToUser, publishToWorkspace } from "../lib/realtime-hub.js";
-import { buildReceiptImageKey, uploadBufferToR2 } from "../lib/r2.js";
-import { extensionFromMime, telegramDownloadFile, telegramGetFilePath, telegramSendMessage } from "../lib/telegram.js";
+import { randomInt } from "node:crypto";
+import { telegramDownloadFile, telegramGetFilePath, telegramSendMessage } from "../lib/telegram.js";
 import { extraerComprobante, identificarBanco, normalizarReferencia } from "../lib/bancos.js";
 
 /** ¿El miembro del espacio activo puede registrar pagos (permiso `register`)? */
@@ -19,7 +19,23 @@ async function tienePermisoRegistro(workspaceId: string, usuarioId: string): Pro
 }
 
 function codigoAleatorio(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(100000, 1000000));
+}
+
+const linkAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function allowLinkAttempt(chatId: bigint): boolean {
+  const now = Date.now();
+  const key = chatId.toString();
+  const existing = linkAttempts.get(key);
+  const attempt = !existing || existing.resetAt <= now ? { count: 0, resetAt: now + 10 * 60_000 } : existing;
+  attempt.count += 1;
+  linkAttempts.set(key, attempt);
+  if (linkAttempts.size > 10_000) {
+    for (const [id, value] of linkAttempts) if (value.resetAt <= now) linkAttempts.delete(id);
+    if (linkAttempts.size > 10_000) linkAttempts.delete(linkAttempts.keys().next().value!);
+  }
+  return attempt.count <= 5;
 }
 
 export const telegramRoutes: FastifyPluginAsync = async (app) => {
@@ -227,6 +243,11 @@ async function canjearCodigo(msg: TgMessage, chatId: bigint): Promise<void> {
   const match = (msg.text || "").trim().match(/^\/vincular(?:@\w+)?\s+(\d{6})\s*$/i);
   if (!match) return;
 
+  if (!allowLinkAttempt(chatId)) {
+    await telegramSendMessage(chatId.toString(), "Demasiados intentos. Espera 10 minutos y genera un código nuevo.");
+    return;
+  }
+
   const registro = await prisma.codigoVinculacion.findUnique({
     where: { codigo: match[1]! },
     include: { workspace: { select: { spaceName: true } } },
@@ -262,6 +283,7 @@ async function canjearCodigo(msg: TgMessage, chatId: bigint): Promise<void> {
     },
   });
   await prisma.codigoVinculacion.update({ where: { id: registro.id }, data: { usadoEn: new Date() } });
+  linkAttempts.delete(chatId.toString());
 
   // La app se entera por SSE y muestra el chat sin recargar (en móvil el
   // PWA en segundo plano no revalida solo).
@@ -323,14 +345,8 @@ async function procesarComprobante(
   const { buffer, mimeType } = await telegramDownloadFile(filePath);
   const base64Image = buffer.toString("base64");
 
-  let imageKey: string | null = null;
-  let imageUrl: string | null = null;
-  try {
-    const key = buildReceiptImageKey(workspaceId, extensionFromMime(mimeType, filePath));
-    imageUrl = await uploadBufferToR2(buffer, key, mimeType);
-    imageKey = key;
-  } catch (error) {
-    console.warn("No se pudo guardar el comprobante en R2:", error instanceof Error ? error.message : error);
+  if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType) || buffer.length > 5 * 1024 * 1024) {
+    throw new Error("El comprobante debe ser una imagen JPEG, PNG o WebP de hasta 5 MB.");
   }
 
   const bancoId = await identificarBanco(base64Image, mimeType);
@@ -360,8 +376,8 @@ async function procesarComprobante(
       workspaceId,
       registradoPorId: usuarioId,
       telegramChatId,
-      imageKey,
-      imageUrl,
+      imageData: Uint8Array.from(buffer),
+      imageMime: mimeType,
       monto: analysis.monto ?? 0,
       fechaPago: analysis.fecha ? new Date(`${analysis.fecha}T00:00:00`) : new Date(),
       horaPago: analysis.hora,

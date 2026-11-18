@@ -33,7 +33,7 @@ export const APP_URL = (process.env.APP_URL ?? "http://127.0.0.1:5173").replace(
 
 let transporter: Transporter | null = null;
 
-/** Transporte SMTP perezoso: STARTTLS obligatorio, sin verificar un cert autofirmado. */
+/** Transporte SMTP perezoso: STARTTLS obligatorio y certificado verificado. */
 function getTransporter(): Transporter {
   if (!transporter) {
     const host = process.env.SMTP_HOST?.trim();
@@ -47,8 +47,7 @@ function getTransporter(): Transporter {
       secure: process.env.SMTP_SECURE === "true" || port === 465,
       requireTLS: port === 587,
       auth: { user, pass },
-      // El cert es del propio VPS: se cifra igual, sin validar la cadena.
-      tls: { rejectUnauthorized: false },
+      tls: { servername: process.env.SMTP_TLS_SERVERNAME?.trim() || host, rejectUnauthorized: true },
     });
   }
   return transporter;

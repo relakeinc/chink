@@ -23,7 +23,10 @@ declare module "@fastify/jwt" {
   }
 }
 
-const SECRET = process.env.JWT_SECRET ?? "chink-saas-dev-secret-change-me";
+const SECRET = process.env.JWT_SECRET ?? (process.env.NODE_ENV === "production" ? "" : "chink-saas-dev-secret-change-me");
+if (!SECRET || (process.env.NODE_ENV === "production" && SECRET === "chink-saas-dev-secret-change-me")) {
+  throw new Error("JWT_SECRET debe configurarse con un valor seguro en producción.");
+}
 
 /** Registra el plugin de JWT. Todas las rutas /api/* lo requieren salvo /api/auth/login. */
 export async function registerAuth(app: FastifyInstance) {

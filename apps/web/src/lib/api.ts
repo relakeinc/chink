@@ -13,6 +13,20 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+export async function getPagoImage(id: string): Promise<Blob> {
+  const token = getToken();
+  const response = await fetch(`${BASE_URL}/api/pagos/${encodeURIComponent(id)}/imagen`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: "no-store",
+  });
+  if (response.status === 401) {
+    setToken(null);
+    throw new ApiError("Tu sesión expiró. Vuelve a iniciar sesión.", 401);
+  }
+  if (!response.ok) throw new ApiError("No se pudo abrir el comprobante.", response.status);
+  return response.blob();
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {

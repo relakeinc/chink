@@ -34,6 +34,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-chinksaas}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-chinksaas}?schema=public
       PORT: "3100"
       HOST: "0.0.0.0"
+      NODE_ENV: "production"
     ports:
       # El 3100 del host lo ocupa otro proyecto y el 3101 lautch-app-web:
       # se expone en 3102 solo a localhost.

@@ -21,7 +21,7 @@ function toDto(row: {
   horaPago: string | null;
   para: string | null;
   clienteId: string | null;
-  imageUrl: string | null;
+  imageMime: string | null;
   notas: string | null;
   createdAt: Date;
   cliente?: { nombre: string } | null;
@@ -39,7 +39,7 @@ function toDto(row: {
     para: row.para,
     cliente_id: row.clienteId,
     cliente: row.cliente?.nombre ?? null,
-    imagen_url: row.imageUrl,
+    imagen_url: row.imageMime ? `/api/pagos/${row.id}/imagen` : null,
     notas: row.notas,
     creada: row.createdAt,
   };
@@ -103,6 +103,7 @@ export const pagoRoutes: FastifyPluginAsync = async (app) => {
       prisma.pago.count({ where }),
       prisma.pago.findMany({
         where,
+        omit: { imageData: true },
         include: { cliente: { select: { nombre: true } } },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
@@ -135,10 +136,25 @@ export const pagoRoutes: FastifyPluginAsync = async (app) => {
     const ws = await workspaceIdFor(request);
     const pago = await prisma.pago.findFirst({
       where: { id: (request.params as { id: string }).id, workspaceId: ws },
+      omit: { imageData: true },
       include: { cliente: { select: { nombre: true } } },
     });
     if (!pago) return reply.status(404).send({ error: "Pago no encontrado" });
     return { data: toDto(pago) };
+  });
+
+  app.get("/:id/imagen", async (request, reply) => {
+    const ws = await workspaceIdFor(request);
+    const pago = await prisma.pago.findFirst({
+      where: { id: (request.params as { id: string }).id, workspaceId: ws, NOT: { estado: "eliminado" } },
+      select: { imageData: true, imageMime: true },
+    });
+    if (!pago?.imageData || !pago.imageMime) return reply.status(404).send({ error: "Comprobante no encontrado" });
+    if (!["image/jpeg", "image/png", "image/webp"].includes(pago.imageMime)) return reply.status(404).send({ error: "Comprobante no disponible" });
+    return reply.header("Cache-Control", "private, no-store")
+      .header("X-Content-Type-Options", "nosniff")
+      .type(pago.imageMime)
+      .send(Buffer.from(pago.imageData));
   });
 
   /**

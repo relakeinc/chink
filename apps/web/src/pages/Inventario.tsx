@@ -179,12 +179,13 @@ export default function Inventario() {
       showNotice("El navegador bloqueó la ventana de impresión.", { variant: "warning", icon: "warning" });
       return;
     }
+    const escapeHtml = (value: unknown) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
     const cards = picked
       .map(
         (row) => `
         <div class="label">
-          <div class="name">${row.name}</div>
-          <div class="sku">${row.sku} · ${row.category}</div>
+          <div class="name">${escapeHtml(row.name)}</div>
+          <div class="sku">${escapeHtml(row.sku)} · ${escapeHtml(row.category)}</div>
           <div class="stock">Stock: ${row.stock} u. · Mínimo: ${row.minStock} u.</div>
         </div>`,
       )

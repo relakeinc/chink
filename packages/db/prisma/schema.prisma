@@ -390,6 +390,8 @@ model Pago {
   fuenteFondos   String?
   imageKey       String?
   imageUrl       String?
+  imageData      Bytes?
+  imageMime      String?
   rawJson        Json?
   notas          String?
   createdAt      DateTime      @default(now())
