@@ -8,6 +8,7 @@ COPY packages/db/package.json ./packages/db/
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 RUN pnpm install --frozen-lockfile
+RUN mkdir -p node_modules/@chink-saas && ln -s ../../packages/db node_modules/@chink-saas/db
 COPY --chown=node:node . .
 RUN pnpm --filter @chink-saas/db generate \
   && chmod 755 scripts/docker-entrypoint.sh
