@@ -40,6 +40,7 @@ model User {
   id           String       @id @default(cuid())
   email        String       @unique
   passwordHash String
+  sessionVersion Int @default(0)
   name         String
   initials     String
   roleId       String
@@ -73,6 +74,7 @@ model Role {
   users User[]
 
   permissions RolePermission[]
+  workspacePermissions WorkspaceRolePermission[]
   memberships SpaceMember[]
 
   @@map("roles")
@@ -85,6 +87,7 @@ model Permission {
   order Int    @default(0)
 
   roles RolePermission[]
+  workspaceRoles WorkspaceRolePermission[]
 
   @@map("permissions")
 }
@@ -99,6 +102,20 @@ model RolePermission {
 
   @@id([roleId, permissionId])
   @@map("role_permissions")
+}
+
+model WorkspaceRolePermission {
+  workspaceId  String
+  roleId       String
+  permissionId String
+  allowed      Boolean
+
+  workspace  WorkspaceSetting @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  role       Role             @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission       @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, roleId, permissionId])
+  @@map("workspace_role_permissions")
 }
 
 /// Almacenes a los que tiene acceso cada miembro.
@@ -290,6 +307,7 @@ model WorkspaceSetting {
   telegramChats TelegramChat[]
   linkCodes   CodigoVinculacion[]
   productAudits ProductAudit[]
+  rolePermissions WorkspaceRolePermission[]
 
   @@map("workspace_settings")
 }

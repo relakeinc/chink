@@ -163,7 +163,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(400).send({ error: "La nueva contraseña debe ser distinta de la actual" });
       }
 
-      await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(newPassword, 10) } });
+      await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(newPassword, 10), sessionVersion: { increment: 1 } } });
+      const { session } = await membershipSession(user.id, request.user.workspaceId);
 
       // Confirmación accesoria: si el correo falla, el cambio ya quedó.
       try {
@@ -174,7 +175,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         request.log.warn({ userId: user.id, error }, "No se pudo enviar la confirmación de contraseña");
       }
 
-      return { data: { updated: true } };
+      return { data: { updated: true, token: app.jwt.sign(session, { expiresIn: "12h" }) } };
     },
   );
 
@@ -211,7 +212,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
       await prisma.user.update({
         where: { id: user.id },
-        data: { passwordHash: await bcrypt.hash(newPassword, 10), status: "ACTIVE", lastAccessAt: new Date() },
+        data: { passwordHash: await bcrypt.hash(newPassword, 10), status: "ACTIVE", lastAccessAt: new Date(), sessionVersion: { increment: 1 } },
       });
       await prisma.spaceMember.updateMany({
         where: { userId: user.id, workspaceId: user.workspaceId },
@@ -229,7 +230,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   );
 
     /** Perfil de la sesión activa (rol del espacio activo). */  app.get("/me", { onRequest: (request, reply) => app.authenticate(request, reply) }, async (request) => {
-    const { session, permissions } = await membershipSession(request.user.id);
+    const { session, permissions } = await membershipSession(request.user.id, request.user.workspaceId);
 
     return {
       user: {

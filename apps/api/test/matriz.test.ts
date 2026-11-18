@@ -401,6 +401,20 @@ describe("RF12 - Roles y permisos", () => {
     expect(codigos.every((c) => c.status === 200)).toBe(true);
   });
 
+  test("Operador no puede acceder a ningún endpoint de reportes", async () => {
+    const rutas = ["summary", "categories", "low-stock", "rotation", "sales-rate", "exports"];
+    const respuestas = await Promise.all(rutas.map((ruta) => api("GET", `/api/reports/${ruta}`, operador)));
+    expect(respuestas.map((respuesta) => respuesta.status)).toEqual(rutas.map(() => 403));
+    const email = await api("POST", "/api/reports/email", operador, { name: "Inventario actual", email: "destino@pruebas.co" });
+    expect(email.status).toBe(403);
+  });
+
+  test("Consulta puede consultar los reportes con permiso report", async () => {
+    const rutas = ["summary", "categories", "low-stock", "rotation", "sales-rate", "exports"];
+    const respuestas = await Promise.all(rutas.map((ruta) => api("GET", `/api/reports/${ruta}`, consulta)));
+    expect(respuestas.map((respuesta) => respuesta.status)).toEqual(rutas.map(() => 200));
+  });
+
   test("CP038 usuario Consulta intenta crear un producto", async () => {
     const r = await api("POST", "/api/inventory/products", consulta, { sku: "HACK-001", name: "Creado por Consulta", category: "X", stock: 1, unitCost: 1 });
     anotar("CP038", `Código ${r.status}. El usuario de solo consulta SÍ pudo crear el producto.`);

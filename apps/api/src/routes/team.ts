@@ -242,11 +242,11 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
 
     await prisma.user.update({ where: { id: request.user.id }, data: { workspaceId, roleId: member.roleId } });
     const { session, permissions } = await membershipSession(request.user.id);
-    return { token: app.jwt.sign(session, { expiresIn: "7d" }), user: session, permissions };
+    return { token: app.jwt.sign(session, { expiresIn: "12h" }), user: session, permissions };
   });
 
   /** Directorio de miembros del espacio con su rol, almacenes y último acceso. */
-  app.get("/members", async (request) => {
+  app.get("/members", { preHandler: app.requirePermission("admin") }, async (request) => {
     const query = request.query as { search?: string; warehouse?: string };
     const search = query.search?.trim().toLowerCase();
     const warehouse = query.warehouse?.trim();
@@ -304,13 +304,16 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /** Matriz de roles y permisos. */
-  app.get("/permissions", async (request) => {
+  app.get("/permissions", { preHandler: app.requirePermission("admin") }, async (request) => {
     const ws = await workspaceIdFor(request);
-    const [roles, permissions, matrix] = await Promise.all([
+    const [roles, permissions, matrix, overrides] = await Promise.all([
       prisma.role.findMany({ select: { id: true, name: true }, orderBy: { id: "asc" } }),
       prisma.permission.findMany({ orderBy: { order: "asc" } }),
       prisma.rolePermission.findMany(),
+      prisma.workspaceRolePermission.findMany({ where: { workspaceId: ws } }),
     ]);
+    const grants = new Map(matrix.map((m) => [`${m.roleId}:${m.permissionId}`, m.allowed]));
+    for (const override of overrides) grants.set(`${override.roleId}:${override.permissionId}`, override.allowed);
 
     const counts = await prisma.spaceMember.groupBy({ by: ["roleId", "status"], _count: true, where: { workspaceId: ws } });
 
@@ -324,9 +327,7 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
       permissions: permissions.map((permission) => ({
         id: permission.id,
         label: permission.label,
-        grants: Object.fromEntries(
-          matrix.filter((m) => m.permissionId === permission.id).map((m) => [m.roleId, m.allowed]),
-        ),
+        grants: Object.fromEntries(roles.map((role) => [role.id, grants.get(`${role.id}:${permission.id}`) ?? false])),
       })),
     };
   });
@@ -386,10 +387,10 @@ export const teamRoutes: FastifyPluginAsync = async (app) => {
       ]);
       if (!role || !permission) return reply.status(404).send({ error: "Rol o permiso no encontrado" });
 
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId, permissionId } },
+      await prisma.workspaceRolePermission.upsert({
+        where: { workspaceId_roleId_permissionId: { workspaceId: ws, roleId, permissionId } },
         update: { allowed },
-        create: { roleId, permissionId, allowed },
+        create: { workspaceId: ws, roleId, permissionId, allowed },
       });
       await publishToWorkspace(ws, { channels: ["team"] });
       return { data: { roleId, permissionId, allowed } };

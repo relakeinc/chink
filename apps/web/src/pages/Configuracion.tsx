@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api } from "@/lib/api";
+import { api, setToken } from "@/lib/api";
+import { connectRealtime } from "@/lib/realtime";
 import type { SettingsData } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useAsync, ErrorBlock, LoadingBlock } from "@/lib/useAsync";
@@ -445,7 +446,9 @@ function SecurityPanel() {
     }
     setSaving(true);
     try {
-      await api.changePassword({ currentPassword: current, newPassword: next });
+      const result = await api.changePassword({ currentPassword: current, newPassword: next });
+      setToken(result.data.token);
+      connectRealtime();
       setCurrent("");
       setNext("");
       setRepeat("");

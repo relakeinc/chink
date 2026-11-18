@@ -11,6 +11,8 @@ function periodDate(value: string | undefined, fallback: Date): Date {
 }
 
 export const reportRoutes: FastifyPluginAsync = async (app) => {
+  app.addHook("preHandler", app.requirePermission("report"));
+
   /** KPIs de la cabecera de Reportes. */
   app.get("/summary", async (request) => {
     const ws = await workspaceIdFor(request);
@@ -152,7 +154,8 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /** Reportes exportables. */
-  app.get("/exports", async (request) => {    const ws = await workspaceIdFor(request);
+  app.get("/exports", async (request) => {
+    const ws = await workspaceIdFor(request);
     const [totals, movements, lowStock, warehouses] = await Promise.all([
       prisma.product.aggregate({ _sum: { stock: true }, where: { archived: false, workspaceId: ws } }),
       prisma.stockMovement.count({ where: { workspaceId: ws } }),
@@ -181,7 +184,6 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     "/email",
     {
-      preHandler: app.requirePermission("report"),
       schema: {
         body: {
           type: "object",

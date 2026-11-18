@@ -8,18 +8,15 @@ import { subscribeRealtime } from "../lib/realtime-hub.js";
  * espacio del usuario cambia: la app recarga sola, sin F5.
  */
 export const streamRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/stream", async (request, reply) => {
+  app.get("/stream", { logLevel: "silent" }, async (request, reply) => {
     const token = (request.query as { token?: string } | undefined)?.token;
     if (!token) {
       return reply.status(401).send({ error: "Falta el token" });
     }
 
-    let payload: { id: string; workspaceId?: string };
-    try {
-      payload = app.jwt.verify(token) as { id: string; workspaceId?: string };
-    } catch {
-      return reply.status(401).send({ error: "Sesión expirada. Vuelve a iniciar sesión." });
-    }
+    request.headers.authorization = `Bearer ${token}`;
+    await app.authenticate(request, reply);
+    if (reply.sent) return;
 
     reply.hijack();
     reply.raw.writeHead(200, {
@@ -31,6 +28,6 @@ export const streamRoutes: FastifyPluginAsync = async (app) => {
     // Reintento del navegador si se cae la conexión.
     reply.raw.write(`retry: 10000\n\n`);
 
-    subscribeRealtime(payload.id, payload.workspaceId ?? "", reply.raw);
+    subscribeRealtime(request.user.id, request.user.workspaceId ?? "", reply.raw);
   });
 };

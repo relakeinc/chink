@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { workspaceIdFor, activeMembership } from "../lib/workspace-scope.js";
+import { permissionAllowed } from "../lib/permissions.js";
 import { notifyUser } from "./notifications.js";
 import { publishToUser, publishToWorkspace } from "../lib/realtime-hub.js";
 import { buildReceiptImageKey, uploadBufferToR2 } from "../lib/r2.js";
@@ -14,11 +15,7 @@ async function tienePermisoRegistro(workspaceId: string, usuarioId: string): Pro
     select: { roleId: true, status: true },
   });
   if (!member || member.status !== "ACTIVE") return false;
-  const grant = await prisma.rolePermission.findFirst({
-    where: { roleId: member.roleId, allowed: true, permission: { key: "register" } },
-    select: { roleId: true },
-  });
-  return Boolean(grant);
+  return permissionAllowed(workspaceId, member.roleId, "register");
 }
 
 function codigoAleatorio(): string {

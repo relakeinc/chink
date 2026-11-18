@@ -320,7 +320,7 @@ export const api = {
   activate: (body: { currentPassword: string; newPassword: string }) =>
     request<{ token: string; user: SessionUser; permissions: string[] }>("/api/auth/activate", { method: "PATCH", body }),
   changePassword: (body: { currentPassword: string; newPassword: string }) =>
-    request<{ data: { updated: boolean } }>("/api/auth/password", { method: "PATCH", body }),
+    request<{ data: { updated: boolean; token: string } }>("/api/auth/password", { method: "PATCH", body }),
 
   /* Inventario */
   getSummary: () => request<InventorySummary>("/api/inventory/summary"),

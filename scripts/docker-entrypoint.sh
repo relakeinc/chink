@@ -1,5 +1,5 @@
 #!/bin/sh
-# Arranque de prod: migraciones, seed solo si la BD está vacía y servidor.
+# Arranque de prod: migraciones, catálogo de roles y servidor.
 # Ojo: `pnpm --filter` ejecuta con cwd en el paquete, así que las rutas van
 # relativas a apps/api (servidor) o a la raíz vía ../../ (scripts).
 set -e

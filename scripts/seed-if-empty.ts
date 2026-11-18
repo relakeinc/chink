@@ -1,22 +1,34 @@
-/**
- * Seed inicial solo si la BD está vacía. El seed normal borra todo, así que
- * aquí solo se ejecuta cuando no hay productos (primer arranque).
- *
- * Sin top-level await: este script vive fuera de apps/api (sin "type":
- * "module") y tsx lo compila como CJS.
- */
+/** Inicializa el catálogo de roles sin crear cuentas demo ni borrar datos. */
 import { prisma } from "@chink-saas/db";
 
-async function main(): Promise<void> {
-  const count = await prisma.product.count();
-  await prisma.$disconnect();
+const roles = ["Administradora", "Gestor", "Operador", "Consulta"];
+const permissions = [
+  { key: "consult", label: "Consultar inventario y movimientos", order: 1, grants: [true, true, true, true] },
+  { key: "register", label: "Registrar entradas, salidas y transferencias", order: 2, grants: [true, true, true, false] },
+  { key: "adjust", label: "Ajustar stock y gestionar almacenes", order: 3, grants: [true, true, false, false] },
+  { key: "report", label: "Consultar y exportar reportes", order: 4, grants: [true, true, false, true] },
+  { key: "admin", label: "Gestionar equipo y configuración", order: 5, grants: [true, false, false, false] },
+];
 
-  if (count === 0) {
-    console.log("BD vacía: ejecutando seed inicial…");
-    await import("../packages/db/prisma/seed.ts");
-  } else {
-    console.log(`Seed omitido: ya hay ${count} productos.`);
+async function main(): Promise<void> {
+  const roleRows = await Promise.all(roles.map((name) => prisma.role.upsert({
+    where: { name }, update: {}, create: { name },
+  })));
+
+  for (const entry of permissions) {
+    const permission = await prisma.permission.upsert({
+      where: { key: entry.key }, update: {}, create: { key: entry.key, label: entry.label, order: entry.order },
+    });
+    for (const [index, role] of roleRows.entries()) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
+        update: {},
+        create: { roleId: role.id, permissionId: permission.id, allowed: entry.grants[index] ?? false },
+      });
+    }
   }
 }
 
-void main();
+main()
+  .catch((error: unknown) => { console.error(error); process.exitCode = 1; })
+  .finally(async () => { await prisma.$disconnect(); });
