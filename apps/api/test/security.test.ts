@@ -1,4 +1,6 @@
-import { afterAll, beforeAll, expect, test } from "vitest";
+import { afterAll, beforeAll, expect, test, vi } from "vitest";
+const codes = vi.hoisted(() => new Map<string, string>());
+vi.mock("../src/lib/email.js", async (importOriginal) => ({ ...(await importOriginal<typeof import("../src/lib/email.js")>()), sendEmail: vi.fn(async (input: { to: string | string[]; text?: string }) => { const code = input.text?.match(/Tu código es (\d{6})/)?.[1]; if (code && typeof input.to === "string") codes.set(input.to, code); }) }));
 import type { FastifyInstance } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { buildApp } from "../src/app.js";
@@ -25,8 +27,10 @@ test("permisos y membresías se aplican por espacio y en la sesión vigente", as
     const result = await call("POST", "/api/auth/register", undefined, {
       name, email: `${name}-${suffix}@pruebas.co`, password: "Tienda2026*",
     });
-    expect(result.status).toBe(201);
-    return result.body as { token: string; user: { id: string; workspaceId: string } };
+    expect(result.status).toBe(202);
+    const verified = await call("POST", "/api/auth/verify-email", undefined, { email: `${name}-${suffix}@pruebas.co`, code: codes.get(`${name}-${suffix}@pruebas.co`) });
+    expect(verified.status).toBe(201);
+    return verified.body as { token: string; user: { id: string; workspaceId: string } };
   };
   const a = await register("admina");
   const b = await register("adminb");

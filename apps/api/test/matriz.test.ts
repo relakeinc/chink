@@ -4,7 +4,9 @@
  * Corre contra la API real (Fastify inject) y una base de datos de pruebas
  * cargada con el seed. Requiere DATABASE_URL apuntando a esa base.
  */
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+const codes = vi.hoisted(() => new Map<string, string>());
+vi.mock("../src/lib/email.js", async (importOriginal) => ({ ...(await importOriginal<typeof import("../src/lib/email.js")>()), sendEmail: vi.fn(async (input: { to: string | string[]; text?: string }) => { const code = input.text?.match(/Tu código es (\d{6})/)?.[1]; if (code && typeof input.to === "string") codes.set(input.to, code); }) }));
 import { appendFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -43,12 +45,16 @@ async function login(email: string, password = "chink2026") {
 let n = 0;
 async function espacioNuevo() {
   n += 1;
+  const email = `tester${Date.now()}${n}@pruebas.co`;
   const r = await api("POST", "/api/auth/register", undefined, {
     name: "Tester Chink",
-    email: `tester${Date.now()}${n}@pruebas.co`,
+    email,
     password: "Tienda2026*",
   });
-  const token = r.body.token as string;
+  expect(r.status).toBe(202);
+  const verified = await api("POST", "/api/auth/verify-email", undefined, { email, code: codes.get(email) });
+  expect(verified.status).toBe(201);
+  const token = verified.body.token as string;
   const w = await api("POST", "/api/warehouses", token, { code: `ALM-T${n}`, name: "Bodega principal", location: "Cali", capacity: 1000 });
   return { token, warehouseId: w.body.data.id as string };
 }

@@ -329,10 +329,12 @@ export const api = {
     }),
   me: () => request<{ user: SessionUser; permissions: string[] }>("/api/auth/me"),
   register: (body: { name: string; email: string; password: string }) =>
-    request<{ token: string; user: SessionUser; permissions: string[]; mustActivate: boolean }>("/api/auth/register", {
+    request<{ verificationRequired: true; email: string; expiresInSeconds: number }>("/api/auth/register", {
       method: "POST",
       body,
     }),
+  verifyEmail: (email: string, code: string) => request<{ token: string; user: SessionUser; permissions: string[] }>("/api/auth/verify-email", { method: "POST", body: { email, code } }),
+  resendCode: (email: string) => request<{ verificationRequired: true; email: string; expiresInSeconds: number }>("/api/auth/resend-code", { method: "POST", body: { email } }),
   activate: (body: { currentPassword: string; newPassword: string }) =>
     request<{ token: string; user: SessionUser; permissions: string[] }>("/api/auth/activate", { method: "PATCH", body }),
   changePassword: (body: { currentPassword: string; newPassword: string }) =>

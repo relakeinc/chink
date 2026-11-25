@@ -18,6 +18,8 @@ export default function Registro() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [code, setCode] = useState("");
 
   if (user) return <Navigate to="/inicio" replace />;
 
@@ -35,10 +37,8 @@ export default function Registro() {
     setSending(true);
     try {
       const session = await api.register({ name: name.trim(), email: email.trim(), password });
-      setToken(session.token);
-      await refresh();
-      connectRealtime();
-      navigate("/inicio", { replace: true });
+      setPendingEmail(session.email);
+      setPassword("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo crear la cuenta");
     } finally {
@@ -46,13 +46,44 @@ export default function Registro() {
     }
   }
 
+  async function verify(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setSending(true);
+    try {
+      const session = await api.verifyEmail(pendingEmail, code);
+      setToken(session.token);
+      await refresh();
+      connectRealtime();
+      navigate("/inicio", { replace: true });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudo verificar el correo");
+    } finally { setSending(false); }
+  }
+
+  async function resend() {
+    setError(null);
+    setSending(true);
+    try {
+      await api.resendCode(pendingEmail);
+      setCode("");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo reenviar el código"); }
+    finally { setSending(false); }
+  }
+
   return (
     <AuthSplit
-      title="Crea tu cuenta"
-      description="Tu propio espacio privado en segundos. Solo quien invite tu equipo verá tus datos."
+      title={pendingEmail ? "Verifica tu correo" : "Crea tu cuenta"}
+      description={pendingEmail ? `Enviamos un código de 6 dígitos a ${pendingEmail}. Vence en 5 minutos.` : "Tu espacio se creará cuando confirmes tu correo."}
       asideCta={{ label: "Entrar", to: "/login" }}
     >
-      <form onSubmit={submit} className="flex flex-col gap-[14px] rounded-[10px] bg-subtle p-[24px]">
+      {pendingEmail ? <form onSubmit={verify} className="flex flex-col gap-[14px] rounded-[10px] bg-subtle p-[24px]">
+        {error ? <p className="text-[12px] text-warn">{error}</p> : null}
+        <label className="flex flex-col gap-[6px]"><span className="text-[11px] font-medium text-ink">Código de verificación</span><input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" required className={fieldClass} /></label>
+        <Button variant="primary" height={38} type="submit" disabled={sending || code.length !== 6}>{sending ? "Verificando…" : "Verificar y entrar"}</Button>
+        <button type="button" disabled={sending} onClick={() => void resend()} className="text-[12px] text-ink disabled:text-muted">Solicitar otro código (tras 1 minuto)</button>
+        <button type="button" onClick={() => { setPendingEmail(""); setCode(""); setError(null); }} className="text-[12px] text-muted">Cancelar registro</button>
+      </form> : <form onSubmit={submit} className="flex flex-col gap-[14px] rounded-[10px] bg-subtle p-[24px]">
         {error ? <p className="text-[12px] text-warn">{error}</p> : null}
         <label className="flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Nombre</span>
@@ -75,7 +106,7 @@ export default function Registro() {
             Entra aquí
           </Link>
         </p>
-      </form>
+      </form>}
     </AuthSplit>
   );
 }

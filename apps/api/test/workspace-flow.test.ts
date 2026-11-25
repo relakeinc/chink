@@ -1,5 +1,8 @@
-import { afterAll, beforeAll, expect, test } from "vitest";
+import { afterAll, beforeAll, expect, test, vi } from "vitest";
+const codes = vi.hoisted(() => new Map<string, string>());
+vi.mock("../src/lib/email.js", async (importOriginal) => ({ ...(await importOriginal<typeof import("../src/lib/email.js")>()), sendEmail: vi.fn(async (input: { to: string | string[]; text?: string }) => { const code = input.text?.match(/Tu código es (\d{6})/)?.[1]; if (code && typeof input.to === "string") codes.set(input.to, code); }) }));
 import type { FastifyInstance } from "fastify";
+import { prisma } from "@chink-saas/db";
 import { buildApp } from "../src/app.js";
 
 let app: FastifyInstance;
@@ -21,9 +24,13 @@ afterAll(async () => {
 test("un espacio nuevo queda aislado y permite crear, vender y proyectar el stock", async () => {
   const email = `flujo-${crypto.randomUUID()}@pruebas.co`;
   const registered = await call("POST", "/api/auth/register", undefined, { name: "Dueña de tienda", email, password: "Tienda2026*" });
-  expect(registered.status).toBe(201);
-  const firstToken = registered.body.token as string;
-  const firstWorkspace = registered.body.user.workspaceId as string;
+  expect(registered.status).toBe(202);
+  expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
+  const verified = await call("POST", "/api/auth/verify-email", undefined, { email, code: codes.get(email) });
+  expect(verified.status).toBe(201);
+  expect((await call("POST", "/api/auth/verify-email", undefined, { email, code: codes.get(email) })).status).toBe(400);
+  const firstToken = verified.body.token as string;
+  const firstWorkspace = verified.body.user.workspaceId as string;
 
   const createdSpace = await call("POST", "/api/team/spaces", firstToken, { spaceName: "Tienda de abarrotes" });
   expect(createdSpace.status).toBe(201);
@@ -67,4 +74,29 @@ test("un espacio nuevo queda aislado y permite crear, vender y proyectar el stoc
   expect(oldSpace.status).toBe(200);
   expect((await call("GET", "/api/inventory/products", oldSpace.body.token)).body.meta.total).toBe(0);
   expect((await call("GET", "/api/movements", oldSpace.body.token)).body.meta.total).toBe(0);
+});
+
+test("el código vence a los cinco minutos y admite cinco intentos", async () => {
+  const email = `codigo-${crypto.randomUUID()}@pruebas.co`;
+  expect((await call("POST", "/api/auth/register", undefined, { name: "Cuenta temporal", email, password: "Tienda2026*" })).status).toBe(202);
+  const wrongCode = codes.get(email) === "000000" ? "000001" : "000000";
+  for (let attempt = 0; attempt < 5; attempt++) expect((await call("POST", "/api/auth/verify-email", undefined, { email, code: wrongCode })).status).toBe(400);
+  expect((await call("POST", "/api/auth/verify-email", undefined, { email, code: codes.get(email) })).status).toBe(429);
+  await prisma.pendingRegistration.update({ where: { email }, data: { lastSentAt: new Date(Date.now() - 61_000) } });
+  const priorCode = codes.get(email);
+  expect((await call("POST", "/api/auth/resend-code", undefined, { email })).status).toBe(200);
+  expect((await call("POST", "/api/auth/verify-email", undefined, { email, code: priorCode })).status).toBe(400);
+  await prisma.pendingRegistration.update({ where: { email }, data: { expiresAt: new Date(Date.now() - 1) } });
+  expect((await call("POST", "/api/auth/verify-email", undefined, { email, code: codes.get(email) })).status).toBe(410);
+  expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
+});
+
+test("cinco contraseñas erróneas bloquean temporalmente el acceso", async () => {
+  const email = `bloqueo-${crypto.randomUUID()}@pruebas.co`;
+  expect((await call("POST", "/api/auth/register", undefined, { name: "Cuenta protegida", email, password: "Tienda2026*" })).status).toBe(202);
+  expect((await call("POST", "/api/auth/verify-email", undefined, { email, code: codes.get(email) })).status).toBe(201);
+  for (let attempt = 0; attempt < 5; attempt++) expect((await call("POST", "/api/auth/login", undefined, { email, password: "incorrecta" })).status).toBe(401);
+  expect((await call("POST", "/api/auth/login", undefined, { email, password: "Tienda2026*" })).status).toBe(429);
+  await prisma.user.update({ where: { email }, data: { loginLockedUntil: new Date(Date.now() - 1) } });
+  expect((await call("POST", "/api/auth/login", undefined, { email, password: "Tienda2026*" })).status).toBe(200);
 });

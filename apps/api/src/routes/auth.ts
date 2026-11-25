@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "@chink-saas/db";
 import { emailAssets, passwordChangedEmail, sendEmail } from "../lib/email.js";
@@ -13,6 +14,10 @@ const loginBody = {
   },
 } as const;
 
+const codeHash = (email: string, code: string) => createHmac("sha256", process.env.JWT_SECRET || "chink-saas-dev-secret-change-me").update(`${email}:${code}`).digest("hex");
+const verificationCode = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
+const cleanAddress = (email: string) => email.trim().toLowerCase();
+
 export const authRoutes: FastifyPluginAsync = async (app) => {
   /** Inicio de sesión. Devuelve el token y el perfil con sus permisos del espacio activo. */
   app.post("/login", { schema: { body: loginBody } }, async (request, reply) => {
@@ -20,7 +25,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     const user = await prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() },
-      select: { id: true, passwordHash: true },
+      select: { id: true, passwordHash: true, failedLoginCount: true, loginLockedUntil: true },
     });
 
     // Ojo: `reply.send()` envía de inmediato, así que la respuesta se construye
@@ -29,8 +34,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     if (!user) return invalid();
 
+    if (user.loginLockedUntil && user.loginLockedUntil > new Date()) return reply.status(429).send({ error: "Demasiados intentos. Intenta de nuevo en 15 minutos." });
     const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return invalid();
+    if (!ok) {
+      const count = user.loginLockedUntil && user.loginLockedUntil <= new Date() ? 1 : user.failedLoginCount + 1;
+      await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: count, loginLockedUntil: count >= 5 ? new Date(Date.now() + 15 * 60_000) : null } });
+      return invalid();
+    }
 
     const { session, permissions } = await membershipSession(user.id);
 
@@ -38,7 +48,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     // activar: el frontend lo retiene en /activar hasta que ponga su clave.
     const mustActivate = session.status !== "ACTIVE";
 
-    await prisma.user.update({ where: { id: user.id }, data: { lastAccessAt: new Date() } });
+    await prisma.user.update({ where: { id: user.id }, data: { lastAccessAt: new Date(), failedLoginCount: 0, loginLockedUntil: null } });
 
     return {
       token: app.jwt.sign(session, { expiresIn: "12h" }),
@@ -76,70 +86,78 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       }
       const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
       if (existing) return reply.status(409).send({ error: "Ese correo ya tiene cuenta. Inicia sesión." });
+      await prisma.pendingRegistration.deleteMany({ where: { expiresAt: { lt: new Date(Date.now() - 24 * 60 * 60_000) } } });
 
-      const role = await prisma.role.findFirst({ where: { name: "Administradora" } });
-      if (!role) return reply.status(500).send({ error: "Roles sin inicializar" });
-
-      const initials = name
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() ?? "")
-        .join("");
-
-      const workspaceId = crypto.randomUUID();
-
-      await prisma.workspaceSetting.create({
-        data: {
-          id: workspaceId,
-          spaceName: "Mi espacio",
-          spaceColor: "#242722",
-          spaceMark: "workspace-mark",
-          legalName: "",
-          contactEmail: cleanEmail,
-          taxId: "",
-          language: "Español (España)",
-          currency: "Peso colombiano · COP ($)",
-          timezone: "America / Bogota (UTC-05:00)",
-          dateFormat: "DD/MM/AAAA",
-          unit: "Unidad (u.)",
-          movementPrefix: "MOV-",
-          defaultMinStock: 10,
-        },
+      const pending = await prisma.pendingRegistration.findUnique({ where: { email: cleanEmail } });
+      if (pending && Date.now() - pending.lastSentAt.getTime() < 60_000) {
+        return reply.status(429).send({ error: "Espera un minuto antes de pedir otro código." });
+      }
+      const code = verificationCode();
+      const passwordHash = await bcrypt.hash(password, 10);
+      await prisma.pendingRegistration.upsert({
+        where: { email: cleanEmail },
+        create: { email: cleanEmail, name: name.trim(), passwordHash, codeHash: codeHash(cleanEmail, code), expiresAt: new Date(Date.now() + 300_000) },
+        update: { name: name.trim(), passwordHash, codeHash: codeHash(cleanEmail, code), expiresAt: new Date(Date.now() + 300_000), attempts: 0, lastSentAt: new Date() },
       });
-
-      const warehouse = await prisma.warehouse.create({
-        data: { workspaceId, code: "PRINCIPAL", name: "Principal", location: "Principal", address: "", capacity: 100000, position: 1 },
-      });
-      await prisma.workspaceSetting.update({ where: { id: workspaceId }, data: { defaultWarehouseId: warehouse.id } });
-
-      const created = await prisma.user.create({
-        data: {
-          email: cleanEmail,
-          name: name.trim(),
-          initials: initials || "?",
-          passwordHash: await bcrypt.hash(password, 10),
-          roleId: role.id,
-          status: "ACTIVE",
-          workspaceId,
-          lastAccessAt: new Date(),
-        },
-      });
-
-      await prisma.spaceMember.create({
-        data: { userId: created.id, workspaceId, roleId: role.id, status: "ACTIVE" },
-      });
-
-      const { session, permissions } = await membershipSession(created.id);
-
-      return reply.status(201).send({
-        token: app.jwt.sign(session, { expiresIn: "12h" }),
-        user: session,
-        permissions,
-        mustActivate: false,
-      });
+      try {
+        await sendEmail({ category: "verification", to: cleanEmail, subject: "Tu código de verificación de Chink", text: `Tu código es ${code}. Vence en 5 minutos y solo sirve una vez.`, html: `<p>Tu código de verificación de Chink es <strong>${code}</strong>.</p><p>Vence en 5 minutos y solo sirve una vez.</p>` });
+      } catch (error) {
+        request.log.error({ error }, "No se pudo enviar el código de registro");
+        await prisma.pendingRegistration.deleteMany({ where: { email: cleanEmail, codeHash: codeHash(cleanEmail, code) } });
+        return reply.status(503).send({ error: "No se pudo enviar el código. Inténtalo de nuevo." });
+      }
+      return reply.status(202).send({ verificationRequired: true, email: cleanEmail, expiresInSeconds: 300 });
     },
   );
+
+  app.post("/resend-code", { schema: { body: { type: "object", required: ["email"], properties: { email: { type: "string", minLength: 3, maxLength: 120 } } } } }, async (request, reply) => {
+    const email = cleanAddress((request.body as { email: string }).email);
+    const pending = await prisma.pendingRegistration.findUnique({ where: { email } });
+    if (!pending) return reply.status(404).send({ error: "No hay un registro pendiente para ese correo." });
+    if (Date.now() - pending.lastSentAt.getTime() < 60_000) return reply.status(429).send({ error: "Espera un minuto antes de pedir otro código." });
+    const code = verificationCode();
+    const hash = codeHash(email, code);
+    await prisma.pendingRegistration.update({ where: { email }, data: { codeHash: hash, expiresAt: new Date(Date.now() + 300_000), attempts: 0, lastSentAt: new Date() } });
+    try {
+      await sendEmail({ category: "verification", to: email, subject: "Tu nuevo código de Chink", text: `Tu código es ${code}. Vence en 5 minutos y solo sirve una vez.`, html: `<p>Tu nuevo código de Chink es <strong>${code}</strong>.</p><p>Vence en 5 minutos y solo sirve una vez.</p>` });
+    } catch (error) {
+      request.log.error({ error }, "No se pudo reenviar el código");
+      return reply.status(503).send({ error: "No se pudo enviar el código. Inténtalo de nuevo en un minuto." });
+    }
+    return { verificationRequired: true, email, expiresInSeconds: 300 };
+  });
+
+  app.post("/verify-email", { schema: { body: { type: "object", required: ["email", "code"], properties: { email: { type: "string", minLength: 3, maxLength: 120 }, code: { type: "string", pattern: "^[0-9]{6}$" } } } } }, async (request, reply) => {
+    const { code } = request.body as { email: string; code: string };
+    const email = cleanAddress((request.body as { email: string }).email);
+    const pending = await prisma.pendingRegistration.findUnique({ where: { email } });
+    if (!pending) return reply.status(400).send({ error: "No hay un código pendiente. Regístrate de nuevo." });
+    if (pending.expiresAt.getTime() <= Date.now()) return reply.status(410).send({ error: "El código venció. Solicita uno nuevo." });
+    if (pending.attempts >= 5) return reply.status(429).send({ error: "Demasiados intentos. Solicita un código nuevo." });
+    const supplied = Buffer.from(codeHash(email, code), "hex");
+    const expected = Buffer.from(pending.codeHash, "hex");
+    if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
+      await prisma.pendingRegistration.updateMany({ where: { email, codeHash: pending.codeHash, attempts: { lt: 5 } }, data: { attempts: { increment: 1 } } });
+      return reply.status(400).send({ error: "Código incorrecto." });
+    }
+    const role = await prisma.role.findFirst({ where: { name: "Administradora" } });
+    if (!role) return reply.status(500).send({ error: "Roles sin inicializar" });
+    const workspaceId = crypto.randomUUID();
+    const initials = pending.name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
+    const created = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.pendingRegistration.deleteMany({ where: { email, codeHash: pending.codeHash, expiresAt: { gt: new Date() }, attempts: { lt: 5 } } });
+      if (claimed.count !== 1) return null;
+      await tx.workspaceSetting.create({ data: { id: workspaceId, spaceName: "Mi espacio", spaceColor: "#242722", spaceMark: "workspace-mark", legalName: "", contactEmail: email, taxId: "", language: "Español (España)", currency: "Peso colombiano · COP ($)", timezone: "America / Bogota (UTC-05:00)", dateFormat: "DD/MM/AAAA", unit: "Unidad (u.)", movementPrefix: "MOV-", defaultMinStock: 10 } });
+      const warehouse = await tx.warehouse.create({ data: { workspaceId, code: "PRINCIPAL", name: "Principal", location: "Principal", address: "", capacity: 100000, position: 1 } });
+      await tx.workspaceSetting.update({ where: { id: workspaceId }, data: { defaultWarehouseId: warehouse.id } });
+      const user = await tx.user.create({ data: { email, name: pending.name, initials, passwordHash: pending.passwordHash, roleId: role.id, status: "ACTIVE", workspaceId, lastAccessAt: new Date() } });
+      await tx.spaceMember.create({ data: { userId: user.id, workspaceId, roleId: role.id, status: "ACTIVE" } });
+      return user;
+    });
+    if (!created) return reply.status(409).send({ error: "El código ya se usó o venció." });
+    const { session, permissions } = await membershipSession(created.id);
+    return reply.status(201).send({ token: app.jwt.sign(session, { expiresIn: "12h" }), user: session, permissions });
+  });
 
   /** Cambio de contraseña de la sesión activa. */
   app.patch(
