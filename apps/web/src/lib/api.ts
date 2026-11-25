@@ -447,6 +447,8 @@ export const api = {
   /* Pagos (comprobantes del espacio) */
   getPagos: (params?: QueryParams) =>
     request<{ data: PagoRow[]; meta: ListMeta }>("/api/pagos", { params }),
+  getPagosResumen: () =>
+    request<{ totalVerificado: number; countVerificado: number; totalRevisar: number; countRevisar: number; bancos: number }>("/api/pagos/resumen"),
   getPagosSemana: () => request<{ monto: number; fecha_pago: string | null }[]>("/api/pagos/semana"),
   getPago: (id: string) => request<{ data: PagoRow }>("/api/pagos/" + id),
   createPago: (body: {

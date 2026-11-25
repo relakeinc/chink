@@ -62,7 +62,7 @@ export default function Pagos() {
       }),
     [search, estado, banco, page],
   );
-  const cierre = useAsync(() => api.getCierre(), []);
+  const resumen = useAsync(() => api.getPagosResumen(), []);
 
   const rows: PagoRow[] = list.data?.data ?? [];
   const total = list.data?.meta.total ?? 0;
@@ -99,7 +99,7 @@ export default function Pagos() {
       await api.updatePago(pago.id, { estado: "verificado" });
       showNotice("Pago marcado como verificado.");
       void list.reload();
-      void cierre.reload();
+      void resumen.reload();
     } catch (cause) {
       showNotice(cause instanceof Error ? cause.message : "No se pudo actualizar", { variant: "error" });
     }
@@ -111,7 +111,7 @@ export default function Pagos() {
       await api.deletePago(pago.id);
       showNotice("Comprobante eliminado.");
       void list.reload();
-      void cierre.reload();
+      void resumen.reload();
     } catch (cause) {
       showNotice(cause instanceof Error ? cause.message : "No se pudo eliminar", { variant: "error" });
     }
@@ -120,18 +120,18 @@ export default function Pagos() {
   /** Tras registrar o editar: recarga explícita (el SSE además avisa al resto). */
   function pagoGuardado(editando: boolean) {
     void list.reload();
-    void cierre.reload();
+    void resumen.reload();
     showNotice(editando ? "Comprobante actualizado." : "Pago registrado.");
   }
 
-  const kpis = cierre.data
+  const kpis = resumen.data
     ? [
-        { label: "VERIFICADO HOY", value: <KpiValue value={cierre.data.totalVerificado} format={formatCOP} />, context: `${cierre.data.countVerificado} ${cierre.data.countVerificado === 1 ? "comprobante" : "comprobantes"}` },
-        { label: "POR REVISAR", value: <KpiValue value={cierre.data.totalRevisar} format={formatCOP} />, context: `${cierre.data.countRevisar} ${cierre.data.countRevisar === 1 ? "comprobante" : "comprobantes"}` },
+        { label: "VERIFICADO", value: <KpiValue value={resumen.data.totalVerificado} format={formatCOP} />, context: `${resumen.data.countVerificado} ${resumen.data.countVerificado === 1 ? "comprobante" : "comprobantes"}` },
+        { label: "POR REVISAR", value: <KpiValue value={resumen.data.totalRevisar} format={formatCOP} />, context: `${resumen.data.countRevisar} ${resumen.data.countRevisar === 1 ? "comprobante" : "comprobantes"}` },
         {
-          label: "BANCOS HOY",
-          value: `${cierre.data.porBanco.length}`,
-          context: cierre.data.porBanco[0] ? `${cierre.data.porBanco[0].banco} lidera` : "Sin movimiento",
+          label: "BANCOS",
+          value: `${resumen.data.bancos}`,
+          context: resumen.data.bancos ? "Con comprobantes" : "Sin movimiento",
         },
       ]
     : [];
@@ -237,7 +237,7 @@ export default function Pagos() {
 
         {seccion === "pagos" ? (
           <div className="flex flex-col gap-[20px] p-[20px]">
-            {cierre.loading ? null : cierre.error ? <ErrorBlock message={cierre.error} onRetry={() => void cierre.reload()} /> : <KpiStrip items={kpis} />}
+            {resumen.loading ? null : resumen.error ? <ErrorBlock message={resumen.error} onRetry={() => void resumen.reload()} /> : <KpiStrip items={kpis} />}
 
             <div className="flex flex-wrap items-center gap-[12px]">
               <SearchInput value={searchInput} onChange={setSearchInput} placeholder="Buscar por referencia o banco" inputRef={searchRef} fluid />

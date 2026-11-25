@@ -60,6 +60,32 @@ const listQuerySchema = {
 } as const;
 
 export const pagoRoutes: FastifyPluginAsync = async (app) => {
+  /** Totales de todos los comprobantes del espacio, independientes de la fecha del pago. */
+  app.get("/resumen", async (request) => {
+    const workspaceId = await workspaceIdFor(request);
+    const groups = await prisma.pago.groupBy({
+      by: ["estado", "bancoDestino"],
+      where: { workspaceId, NOT: { estado: "eliminado" } },
+      _sum: { monto: true },
+      _count: { id: true },
+    });
+    const summary = { totalVerificado: 0, countVerificado: 0, totalRevisar: 0, countRevisar: 0, bancos: 0 };
+    const banks = new Set<string>();
+    for (const group of groups) {
+      const amount = Number(group._sum.monto ?? 0);
+      if (group.estado === "verificado") {
+        summary.totalVerificado += amount;
+        summary.countVerificado += group._count.id;
+      } else if (group.estado === "revisar" || group.estado === "ilegible") {
+        summary.totalRevisar += amount;
+        summary.countRevisar += group._count.id;
+      }
+      if (group.bancoDestino) banks.add(group.bancoDestino);
+    }
+    summary.bancos = banks.size;
+    return summary;
+  });
+
   /** Listado paginado y filtrable del espacio. */
   app.get("/", { schema: { querystring: listQuerySchema } }, async (request) => {
     const ws = await workspaceIdFor(request);
