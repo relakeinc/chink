@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { label: "Operación", href: "#operacion" },
   { label: "Planes", href: "#planes" },
   { label: "Opiniones", href: "#opiniones" },
+  { label: "Documentación", href: "https://palace-1.gitbook.io/chink-docs/" },
 ];
 
 function ChinkLandingNav() {
@@ -23,13 +24,13 @@ function ChinkLandingNav() {
           scrolled ? "border-b border-edge/60 bg-canvas/90 backdrop-blur-xl" : "border-b border-transparent bg-transparent"
         }`}
       >
-        <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
+        <div className="relative mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between px-5 sm:px-8 lg:px-10">
           <Link to="/" className="flex shrink-0 items-center" aria-label="Chink inicio">
             <Logo className="h-[26px] w-auto" />
           </Link>
-          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex" aria-label="Main">
+          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex" aria-label="Main">
             {NAV_LINKS.map((link) => (
-              <a key={link.label} href={link.href} className="rounded-full px-4 py-2 text-[14px] font-medium tracking-[-0.01em] text-muted transition-colors hover:bg-ink/5 hover:text-ink">
+              <a key={link.label} href={link.href} target={link.href.startsWith("https://") ? "_blank" : undefined} rel={link.href.startsWith("https://") ? "noopener noreferrer" : undefined} className="rounded-full px-4 py-2 text-[14px] font-medium tracking-[-0.01em] text-muted transition-colors hover:bg-ink/5 hover:text-ink">
                 {link.label}
               </a>
             ))}
@@ -43,16 +44,16 @@ function ChinkLandingNav() {
             <div className="hidden sm:block">
               <Link to="/registro" className="trell-btn-primary">Crear cuenta</Link>
             </div>
-            <button type="button" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex size-9 cursor-pointer items-center justify-center rounded-full text-ink transition-colors hover:bg-ink/5 md:hidden">
+            <button type="button" aria-label={open ? "Cerrar menú" : "Abrir menú"} aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex size-9 cursor-pointer items-center justify-center rounded-full text-ink transition-colors hover:bg-ink/5 lg:hidden">
               {open ? <span aria-hidden className="text-[18px] leading-none">✕</span> : <Icon name="menu" size={20} />}
             </button>
           </div>
         </div>
       </header>
-      <div aria-hidden={!open} className={`fixed inset-0 z-[900] flex flex-col bg-canvas transition-opacity duration-300 md:hidden ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}>
+      <div aria-hidden={!open} className={`fixed inset-0 z-[900] flex flex-col bg-canvas transition-opacity duration-300 lg:hidden ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}>
         <nav aria-label="Mobile" className="flex flex-1 flex-col justify-center gap-2 px-8">
           {NAV_LINKS.map((link) => (
-            <a key={link.label} href={link.href} onClick={() => setOpen(false)} className="rounded-2xl px-4 py-4 text-2xl font-medium tracking-[-0.02em] text-ink transition-colors hover:bg-ink/5">
+            <a key={link.label} href={link.href} target={link.href.startsWith("https://") ? "_blank" : undefined} rel={link.href.startsWith("https://") ? "noopener noreferrer" : undefined} onClick={() => setOpen(false)} className="rounded-2xl px-4 py-4 text-2xl font-medium tracking-[-0.02em] text-ink transition-colors hover:bg-ink/5">
               {link.label}
             </a>
           ))}
@@ -88,7 +89,7 @@ function ShotCatalogo() {
       ).map(([n, s]) => (
         <div key={n} className="flex items-center gap-3 border-b border-edge py-3 last:border-0">
           <span className="flex size-9 items-center justify-center rounded-lg bg-subtle"><Icon name="package" size={18} /></span>
-          <span className="min-w-0"><span className="block truncate text-[13px] font-medium text-ink">{n}</span><span className="block font-mono text-[11px] text-muted">{s}</span></span>
+          <span className="min-w-0"><span className="block truncate text-[13px] font-medium text-ink">{n}</span><span className="block font-mono text-[12px] text-muted">{s}</span></span>
           <span className="ml-auto rounded-[5px] bg-subtle px-2 py-1 text-[11px] font-semibold text-ink">✓</span>
         </div>
       ))}
@@ -142,11 +143,11 @@ function ShotEquipo() {
  * md:grid-cols-3, md:col-span-2, order-1/order-2, prose). */
 function CodexRow({ flip, title, desc, visual }: { flip?: boolean; title: string; desc: string; visual: React.ReactNode }) {
   return (
-    <div className="col-span-full grid grid-cols-1 gap-6 md:grid-cols-3 md:items-stretch md:gap-x-8">
+    <div className="col-span-full grid grid-cols-1 gap-6 md:grid-cols-3 md:items-center md:gap-x-10 lg:gap-x-14">
       <div className={`order-1 md:flex md:flex-col md:justify-end ${flip ? "md:order-2" : ""}`}>
         <div className="prose max-w-none text-pretty">
-          <h3 className="font-outfit text-[22px] leading-[1.3] font-semibold tracking-[-0.01em] text-ink">{title}</h3>
-          <p className="mt-3 text-[14px] leading-[1.65] text-muted">{desc}</p>
+          <h3 className="font-outfit text-[25px] leading-[1.25] font-semibold tracking-[-0.01em] text-ink">{title}</h3>
+          <p className="mt-3 text-[16px] leading-[1.65] text-muted">{desc}</p>
         </div>
       </div>
       <div className={`order-2 md:col-span-2 ${flip ? "md:order-1" : ""}`}>
@@ -168,16 +169,16 @@ function ChinkFooterCta() {
   const cols = [
     { title: "Producto", links: [{ label: "Catálogo", href: "#producto" }, { label: "Operación", href: "#operacion" }, { label: "Planes", href: "#planes" }] },
     { title: "Cuenta", links: [{ label: "Crear cuenta", href: "/registro" }, { label: "Entrar", href: "/login" }, { label: "Activar invitación", href: "/activar" }] },
-    { title: "App", links: [{ label: "Inicio", href: "/inicio" }, { label: "Inventario", href: "/inventario" }, { label: "Reportes", href: "/reportes" }] },
+    { title: "App", links: [{ label: "Inicio", href: "/inicio" }, { label: "Inventario", href: "/inventario" }, { label: "Reportes", href: "/reportes" }, { label: "Documentación", href: "https://palace-1.gitbook.io/chink-docs/" }] },
   ];
   return (
     <section className="relative overflow-hidden bg-canvas pt-16 sm:pt-24">
-      <div className="relative mx-auto flex w-full max-w-[1440px] flex-col items-center px-5 text-center sm:px-8">
+      <div className="relative mx-auto flex w-full max-w-[1200px] flex-col items-center px-5 text-center sm:px-8">
         <h2 className="max-w-xl font-outfit text-4xl leading-[1.08] font-medium tracking-[-0.04em] text-balance text-ink sm:text-[56px]">Empieza a contar cada unidad hoy.</h2>
         <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-muted">Crea tu espacio privado en segundos y registra tu primer movimiento en minutos. Gratis para empezar.</p>
         <Link to="/registro" className="trell-btn-primary mt-9">Crear cuenta gratis →</Link>
       </div>
-      <div className="relative mx-auto grid w-full max-w-[1440px] gap-12 px-5 pt-20 sm:px-8 lg:grid-cols-[1.2fr_2fr] lg:pt-28">
+      <div className="relative mx-auto grid w-full max-w-[1200px] gap-12 px-5 pt-20 sm:px-8 lg:grid-cols-[1.2fr_2fr] lg:pt-28">
         <div>
           <Logo className="h-[30px] w-auto" />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">Gestión de inventario multi-almacén. Cada referencia, cada unidad.</p>
@@ -192,7 +193,7 @@ function ChinkFooterCta() {
                     {link.href.startsWith("/") ? (
                       <Link to={link.href} className="text-sm text-muted transition-colors hover:text-ink">{link.label}</Link>
                     ) : (
-                      <a href={link.href} className="text-sm text-muted transition-colors hover:text-ink">{link.label}</a>
+                      <a href={link.href} target={link.href.startsWith("https://") ? "_blank" : undefined} rel={link.href.startsWith("https://") ? "noopener noreferrer" : undefined} className="text-sm text-muted transition-colors hover:text-ink">{link.label}</a>
                     )}
                   </li>
                 ))}
@@ -206,7 +207,7 @@ function ChinkFooterCta() {
           <span key={copy} className="h-[17vw] w-auto shrink-0 font-outfit text-[17vw] leading-none font-bold tracking-tight whitespace-nowrap text-ink/[0.07] select-none">CHINK</span>
         ))}
       </div>
-      <div className="relative mx-auto flex w-full max-w-[1440px] flex-col items-center justify-between gap-4 px-5 pt-8 pb-16 sm:flex-row sm:px-8 sm:pb-24">
+      <div className="relative mx-auto flex w-full max-w-[1200px] flex-col items-center justify-between gap-4 px-5 pt-8 pb-16 sm:flex-row sm:px-8 sm:pb-24">
         <small className="text-xs font-normal tracking-wide text-muted">© {new Date().getFullYear()} Chink</small>
         <div className="flex items-center gap-2 text-[13px] text-muted">
           <Link to="/login" className="transition-colors hover:text-ink">Entrar</Link>
@@ -228,17 +229,17 @@ export default function Landing() {
 
       {/* HERO — header centrado Codex + shot */}
       <section className="group/component-group @container pt-16" data-layout="1-column-grid">
-        <div className="@container grid w-full grid-cols-12 gap-x-2 px-5 pt-20 sm:px-8 md:gap-x-4 lg:gap-x-6">
+        <div className="@container mx-auto grid w-full max-w-[1200px] grid-cols-12 gap-x-2 px-5 pt-20 sm:px-8 md:gap-x-4 lg:gap-x-6 lg:pt-24">
           <div className="col-span-full grid w-full grid-cols-1 items-stretch gap-12">
             <div data-section-header="true" className="grid grid-cols-12">
               <div className="col-span-full md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3">
                 <div className="relative flex flex-col items-center text-center">
                   <Icon name="chink-mark" className="h-[40px] w-auto" title="Chink" />
-                  <h1 className="mt-6 max-w-[22ch] font-outfit text-[40px] leading-[1.05] font-semibold tracking-[-0.03em] text-balance sm:text-[60px]">
+                  <h1 className="mt-6 max-w-[22ch] font-outfit text-[42px] leading-[1.08] font-semibold tracking-[-0.035em] text-balance sm:text-[64px] lg:text-[72px]">
                     Todo tu inventario, bajo control
                   </h1>
                   <div className="mt-6 grid w-full grid-cols-12">
-                    <p className="col-span-full max-w-[52ch] justify-self-center text-[15px] leading-relaxed text-balance text-muted">
+                    <p className="col-span-full max-w-[56ch] justify-self-center text-[16px] sm:text-[18px] leading-relaxed text-balance text-muted">
                       Catálogo, movimientos con trazabilidad, multi-almacén y reportes listos para enviar por correo.
                     </p>
                   </div>
@@ -255,7 +256,7 @@ export default function Landing() {
               <div className="col-span-full lg:col-span-10 lg:col-start-2">
                 <div className="relative w-full overflow-hidden">
                   <div className="overflow-hidden rounded-t-2xl border border-b-0 border-edge bg-surface p-1">
-                    <div className="grid gap-3 p-4 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-4 sm:gap-4 sm:p-5">
                       {(
                         [
                           ["STOCK TOTAL", "2.486 u.", "8 productos"],
@@ -264,10 +265,10 @@ export default function Landing() {
                           ["STOCK BAJO", "3 refs", "Requieren atención"],
                         ] as [string, string, string][]
                       ).map(([k, v, s]) => (
-                        <div key={k} className="rounded-lg border border-edge bg-canvas px-3 py-3 text-left">
+                        <div key={k} className="rounded-lg border border-edge bg-canvas px-4 py-4 text-left sm:px-5 sm:py-5">
                           <p className="font-mono text-[10px] tracking-widest text-muted">{k}</p>
-                          <p className="mt-1 font-outfit text-[18px] font-semibold text-ink">{v}</p>
-                          <p className="text-[11px] text-muted">{s}</p>
+                          <p className="mt-1 font-outfit text-[20px] font-semibold text-ink sm:text-[23px]">{v}</p>
+                          <p className="text-[12px] text-muted">{s}</p>
                         </div>
                       ))}
                     </div>
@@ -281,7 +282,7 @@ export default function Landing() {
 
       {/* EMPEZAR */}
       <section id="planes" className="group/component-group @container scroll-mt-20 border-t border-edge" data-layout="1-column-grid">
-        <div className="@container grid w-full grid-cols-12 gap-x-2 px-5 py-16 sm:px-8 md:gap-x-4 lg:gap-x-6">
+        <div className="@container mx-auto grid w-full max-w-[1200px] grid-cols-12 gap-x-2 px-5 py-20 sm:px-8 md:gap-x-4 lg:gap-x-6">
           <div className="col-span-full grid w-full grid-cols-1 items-stretch gap-12">
             <div data-section-header="true" className="grid grid-cols-12">
               <div className="col-span-full md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3">
@@ -300,7 +301,7 @@ export default function Landing() {
                   { n: "Equipo", d: "Roles y espacios para operar.", p: "Por invitación", per: "tu equipo", cta: "Invitar equipo", to: "/registro" },
                   { n: "Operación", d: "Fotos, PDF y correo en tu VPS.", p: "Autogestionado", per: "control total", cta: "Entrar", to: "/login" },
                 ].map((pl) => (
-                  <div key={pl.n} className="flex flex-col gap-4 rounded-xl border border-edge bg-surface p-6">
+                  <div key={pl.n} className="flex flex-col gap-4 rounded-xl border border-edge bg-surface p-6 sm:p-7">
                     <p className="font-outfit text-[16px] font-semibold text-ink">{pl.n}</p>
                     <p className="min-h-[40px] text-[13px] leading-snug text-muted">{pl.d}</p>
                     <p className="font-outfit text-[24px] font-semibold text-ink">{pl.p} <span className="text-[13px] font-normal text-muted">/ {pl.per}</span></p>
@@ -314,8 +315,8 @@ export default function Landing() {
       </section>
 
       {/* LA MEJOR FORMA — 4 filas exactas Codex */}
-      <section id="producto" className="group/component-group @container scroll-mt-20 border-t border-edge bg-subtle/40" data-layout="1-column-grid">
-        <div className="@container grid w-full grid-cols-12 gap-x-2 px-5 py-16 sm:px-8 md:gap-x-4 lg:gap-x-6 sm:py-20">
+      <section id="producto" className="group/component-group @container scroll-mt-20 border-t border-edge bg-subtle/55" data-layout="1-column-grid">
+        <div className="@container mx-auto grid w-full max-w-[1200px] grid-cols-12 gap-x-2 px-5 py-20 sm:px-8 md:gap-x-4 lg:gap-x-6 sm:py-20">
           <div className="col-span-full grid w-full grid-cols-1 items-stretch gap-12 md:gap-16">
             <div data-section-header="true" className="grid grid-cols-12">
               <div className="col-span-full md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3">
@@ -340,7 +341,7 @@ export default function Landing() {
 
       {/* OPERACIÓN */}
       <section id="operacion" className="group/component-group @container scroll-mt-20 border-t border-edge" data-layout="1-column-grid">
-        <div className="@container grid w-full grid-cols-12 gap-x-2 px-5 py-16 sm:px-8 md:gap-x-4 lg:gap-x-6">
+        <div className="@container mx-auto grid w-full max-w-[1200px] grid-cols-12 gap-x-2 px-5 py-20 sm:px-8 md:gap-x-4 lg:gap-x-6">
           <div className="col-span-full grid w-full grid-cols-1 items-stretch gap-8">
             <div data-section-header="true" className="grid grid-cols-12">
               <div className="col-span-full md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3">
@@ -355,7 +356,7 @@ export default function Landing() {
               </div>
             </div>
             <div className="flex flex-row flex-wrap items-center justify-center gap-3">
-              {(["package", "mail", "download", "shield-check", "smartphone", "warehouse-box"] as const).map((ic) => (
+              {(["package", "mail", "download-ink", "shield-check", "smartphone", "warehouse-box"] as const).map((ic) => (
                 <span key={ic} className="flex size-12 items-center justify-center rounded-full border border-edge bg-surface"><Icon name={ic} size={20} /></span>
               ))}
             </div>
@@ -364,8 +365,8 @@ export default function Landing() {
       </section>
 
       {/* EL MISMO EN TODOS LADOS — 4 columnas exactas Codex */}
-      <section className="group/component-group @container border-t border-edge bg-subtle/40" data-layout="4-column-grid">
-        <div className="@container grid w-full grid-cols-12 gap-x-2 px-5 py-16 sm:px-8 md:gap-x-4 lg:gap-x-6">
+      <section className="group/component-group @container border-t border-edge bg-subtle/55" data-layout="4-column-grid">
+        <div className="@container mx-auto grid w-full max-w-[1200px] grid-cols-12 gap-x-2 px-5 py-20 sm:px-8 md:gap-x-4 lg:gap-x-6">
           <div className="col-span-full grid w-full grid-cols-1 items-stretch gap-8">
             <div data-section-header="true" className="grid grid-cols-12">
               <div className="col-span-full md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3">
@@ -386,7 +387,7 @@ export default function Landing() {
                   [
                     ["nav-inicio", "Chink en Web", "Catálogo, movimientos y reportes en tu espacio.", "/inicio"],
                     ["smartphone", "Chink en móvil", "PWA instalable con dock y hoja inferior.", "/inicio"],
-                    ["download", "Reportes PDF", "Inventario y movimientos fila por fila.", "/reportes"],
+                    ["download-ink", "Reportes PDF", "Inventario y movimientos fila por fila.", "/reportes"],
                     ["mail", "Correo", "Invitaciones, avisos y reportes adjuntos.", "/equipo"],
                   ] as [string, string, string, string][]
                 ).map(([ic, t, d, to]) => (
@@ -395,7 +396,7 @@ export default function Landing() {
                     <div className="flex flex-1 flex-col justify-between gap-8 px-3 pb-3">
                       <div className="flex flex-col gap-2">
                         <h3 className="font-outfit text-[17px] font-semibold text-ink">{t}</h3>
-                        <p className="text-[13px] leading-relaxed text-muted">{d}</p>
+                        <p className="text-[14px] leading-relaxed text-muted">{d}</p>
                       </div>
                       <Link to={to} className="trell-btn-primary w-full !py-2.5 text-[13px]">Abrir →</Link>
                     </div>
@@ -409,7 +410,7 @@ export default function Landing() {
 
       {/* OPINIONES — 6 cards exactas Codex */}
       <section id="opiniones" className="group/component-group @container scroll-mt-20 border-t border-edge" data-layout="1-column-grid">
-        <div className="@container grid w-full grid-cols-12 gap-x-2 px-5 py-16 sm:px-8 md:gap-x-4 lg:gap-x-6">
+        <div className="@container mx-auto grid w-full max-w-[1200px] grid-cols-12 gap-x-2 px-5 py-20 sm:px-8 md:gap-x-4 lg:gap-x-6">
           <div className="col-span-full grid w-full grid-cols-1 items-stretch gap-8">
             <div data-section-header="true" className="grid grid-cols-12">
               <div className="col-span-full md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3">

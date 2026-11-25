@@ -45,7 +45,7 @@ Reglas:
 - Sin texto extra, solo JSON.`;
 
   try {
-    const texto = await runGeminiPrompt(prompt, base64Image, mimeType);
+    const texto = await runGeminiPrompt(prompt, base64Image, mimeType, { json: true });
     const parsed = parseJsonSeguro(texto);
     if (!parsed) return { banco: "", confianza: 0, evidencias: [] };
     const banco = normalizeBankName(parsed["banco"]) ?? "";
@@ -97,8 +97,17 @@ Instrucciones importantes:
 - monto_raw_text: monto tal cual aparece. fecha YYYY-MM-DD, hora HH:MM 24h. numero_origen: desde donde se envió.
 - Si un campo no aparece, null exactamente.`;
 
-  const texto = await runGeminiPrompt(prompt, base64Image, mimeType);
-  const parsed = parseJsonSeguro(texto);
+  let texto = await runGeminiPrompt(prompt, base64Image, mimeType, { json: true });
+  let parsed = parseJsonSeguro(texto);
+  if (!parsed || parseMontoCOP(parsed["monto_raw_text"] ?? parsed["monto"]) == null || !parsed["referencia"]) {
+    const retryPrompt = `${prompt}\n\nSegunda lectura: amplía mentalmente la zona del valor y la zona de referencia. Copia los caracteres visibles exactamente. Si una cifra no se distingue, devuelve null; no inventes datos.`;
+    try {
+      texto = await runGeminiPrompt(retryPrompt, base64Image, mimeType, { json: true, models: [process.env.GEMINI_OCR_RETRY_MODEL?.trim() || "gemini-2.5-flash"] });
+      parsed = parseJsonSeguro(texto) ?? parsed;
+    } catch {
+      // La primera lectura todavía puede servir para revisión manual.
+    }
+  }
   if (!parsed) throw new Error("ILEGIBLE");
 
   const str = (v: unknown): string | null => {
@@ -106,7 +115,7 @@ Instrucciones importantes:
     return t ? t : null;
   };
   const montoRaw = str(parsed["monto_raw_text"]);
-  const monto = parseMontoCOP(montoRaw ?? (typeof parsed["monto"] === "number" ? parsed["monto"] : null));
+  const monto = parseMontoCOP(montoRaw ?? parsed["monto"]);
 
   if (monto == null && !str(parsed["referencia"])) throw new Error("NO_ES_COMPROBANTE");
 

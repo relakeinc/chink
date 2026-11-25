@@ -226,25 +226,48 @@ export const pagoRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  /** Edita estado/notas/cliente. Requiere permiso de registro. */
+  /** Edita estado/notas/cliente y completa comprobantes pendientes de lectura. */
   app.patch(
     "/:id",
     { preHandler: app.requirePermission("register") },
     async (request, reply) => {
       const ws = await workspaceIdFor(request);
       const id = (request.params as { id: string }).id;
-      const body = (request.body ?? {}) as { estado?: string; notas?: string; clienteId?: string | null };
+      const body = (request.body ?? {}) as { estado?: string; notas?: string; clienteId?: string | null; monto?: number; referencia?: string; bancoDestino?: string; fuenteFondos?: string; fechaPago?: string; para?: string };
 
-      const existing = await prisma.pago.findFirst({ where: { id, workspaceId: ws }, select: { id: true } });
+      const existing = await prisma.pago.findFirst({ where: { id, workspaceId: ws }, select: { id: true, estado: true, monto: true } });
       if (!existing) return reply.status(404).send({ error: "Pago no encontrado" });
 
       const data: Record<string, unknown> = {};
+      const canComplete = existing.estado === "revisar";
+      const hasDetails = ["monto", "referencia", "bancoDestino", "fuenteFondos", "fechaPago", "para"].some((key) => Object.prototype.hasOwnProperty.call(body, key));
+      if (hasDetails && !canComplete) return reply.status(409).send({ error: "Solo se pueden completar los datos de comprobantes pendientes de lectura" });
+      if (canComplete) {
+        if (body.monto !== undefined) {
+          if (!Number.isFinite(body.monto) || body.monto <= 0) return reply.status(400).send({ error: "El monto debe ser mayor a 0" });
+          data["monto"] = body.monto;
+        }
+        if (body.referencia !== undefined) {
+          const referencia = normalizarReferencia(body.referencia);
+          if (referencia && await prisma.pago.findFirst({ where: { workspaceId: ws, referencia, id: { not: id } }, select: { id: true } })) return reply.status(409).send({ error: "Ya existe un pago con esa referencia" });
+          data["referencia"] = referencia;
+        }
+        if (body.bancoDestino !== undefined) data["bancoDestino"] = body.bancoDestino.trim() || null;
+        if (body.fuenteFondos !== undefined) data["fuenteFondos"] = body.fuenteFondos.trim() || null;
+        if (body.para !== undefined) data["para"] = body.para.trim() || null;
+        if (body.fechaPago !== undefined) {
+          const date = new Date(`${body.fechaPago}T00:00:00`);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(body.fechaPago) || Number.isNaN(date.getTime())) return reply.status(400).send({ error: "Fecha no válida" });
+          data["fechaPago"] = date;
+        }
+      }
       if (body.estado !== undefined) {
         if (!ESTADOS.includes(body.estado as (typeof ESTADOS)[number])) {
           return reply.status(400).send({ error: `Estado debe ser uno de: ${ESTADOS.join(", ")}` });
         }
         data["estado"] = body.estado;
       }
+      if (canComplete && body.estado === "verificado" && !(Number(body.monto ?? existing.monto) > 0)) return reply.status(400).send({ error: "Indica el monto antes de verificar" });
       if (body.notas !== undefined) data["notas"] = String(body.notas).slice(0, 500) || null;
       if (body.clienteId !== undefined) {
         if (body.clienteId) {

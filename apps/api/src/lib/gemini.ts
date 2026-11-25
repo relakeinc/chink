@@ -51,17 +51,20 @@ export function cleanMarkdownBlocks(text: unknown): string {
 }
 
 /** Llama a Gemini con imagen y devuelve el texto limpio. Rota keys ante rate limit y modelos ante retiros. */
-export async function runGeminiPrompt(prompt: string, base64Image: string, mimeType: string): Promise<string> {
+export async function runGeminiPrompt(prompt: string, base64Image: string, mimeType: string, options: { models?: string[]; json?: boolean } = {}): Promise<string> {
   const keys = geminiKeys();
   if (keys.length === 0) throw new Error("No hay API keys de Gemini configuradas");
 
   let lastError: unknown = null;
-  for (const modelName of modelChain()) {
+  for (const modelName of options.models ?? modelChain()) {
     for (let attempt = 0; attempt < keys.length; attempt += 1) {
       const key = nextKey();
       try {
         const genAI = new GoogleGenerativeAI(key);
-        const model = genAI.getGenerativeModel({ model: modelName });
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          ...(options.json ? { generationConfig: { responseMimeType: "application/json", temperature: 0 } } : {}),
+        });
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { data: base64Image, mimeType: mimeType || "image/jpeg" } }] }],
         });
@@ -172,8 +175,9 @@ export function validarMonto(rawText: unknown, value: unknown): { ok: boolean; r
   if (!Number.isFinite(valueNum) || valueNum <= 0) {
     return { ok: false, reason: "Monto inválido o no legible" };
   }
-  if ((raw.includes(".") || raw.includes(",")) && valueNum < 10000) {
-    return { ok: false, reason: "Monto sospechoso: posible parse incorrecto de separadores" };
+  const amountInText = raw ? parseMontoCOP(raw) : null;
+  if (amountInText !== null && Math.abs(amountInText - valueNum) > 0.01) {
+    return { ok: false, reason: "El monto no coincide con el texto leído" };
   }
   return { ok: true };
 }

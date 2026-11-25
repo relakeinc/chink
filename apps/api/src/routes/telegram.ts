@@ -214,7 +214,15 @@ async function procesarUpdate(update: { message?: TgMessage }): Promise<void> {
     try {
       await procesarComprobante(msg, chat.workspaceId, chat.usuarioId, chatId.toString(), chat.id);
     } catch (error) {
-      await telegramSendMessage(chatId.toString(), "❌ Ocurrió un error procesando el comprobante. Intenta de nuevo.");
+      const message = error instanceof Error ? error.message : String(error);
+      const isImage = /JPEG|PNG|WebP|5 MB|imagen/i.test(message);
+      const isAi = /Gemini|API key|429|quota|rate limit|model|404/i.test(message);
+      const response = isImage
+        ? "❌ La imagen debe ser JPEG, PNG o WebP y pesar menos de 5 MB. Envíala como foto."
+        : isAi
+          ? "❌ El servicio de lectura de comprobantes no está disponible ahora. Intenta más tarde o registra el pago manualmente en Chink."
+          : "❌ No pude registrar el comprobante. Intenta de nuevo o registra el pago manualmente en Chink.";
+      await telegramSendMessage(chatId.toString(), response);
       throw error;
     }
     return;
@@ -349,8 +357,36 @@ async function procesarComprobante(
     throw new Error("El comprobante debe ser una imagen JPEG, PNG o WebP de hasta 5 MB.");
   }
 
-  const bancoId = await identificarBanco(base64Image, mimeType);
-  const analysis = await extraerComprobante(base64Image, mimeType, bancoId);
+  let bancoId;
+  let analysis;
+  try {
+    bancoId = await identificarBanco(base64Image, mimeType);
+    analysis = await extraerComprobante(base64Image, mimeType, bancoId);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Error desconocido";
+    console.error("No se pudo leer el comprobante automáticamente:", reason);
+    const pending = await prisma.pago.create({
+      data: {
+        workspaceId,
+        registradoPorId: usuarioId,
+        telegramChatId,
+        imageData: Uint8Array.from(buffer),
+        imageMime: mimeType,
+        monto: 0,
+        estado: "revisar",
+        notas: "Lectura automática fallida. Completa los datos desde Pagos.",
+      },
+    });
+    await publishToWorkspace(workspaceId, { channels: ["pagos", "dashboard"] });
+    await notifyUser(usuarioId, {
+      workspaceId,
+      kind: "pago",
+      title: "Comprobante para revisar",
+      body: "La foto se guardó, pero no se pudieron leer los datos automáticamente.",
+    }).catch(() => undefined);
+    await telegramSendMessage(chatIdStr, `📥 Guardé la foto como comprobante para revisar (${pending.id}). Abre Pagos en Chink y completa los datos manualmente.`);
+    return;
+  }
   const referencia = normalizarReferencia(analysis.referencia);
 
   const existente = referencia
@@ -366,10 +402,14 @@ async function procesarComprobante(
 
   const montoDudoso = analysis.montoValidation.ok === false;
   const bancoDudoso = bancoId.confianza < 0.85;
-  const estado = montoDudoso || bancoDudoso ? "revisar" : "verificado";
+  const referenciaDudosa = !referencia;
+  const fechaValida = Boolean(analysis.fecha && /^\d{4}-\d{2}-\d{2}$/.test(analysis.fecha) && !Number.isNaN(new Date(`${analysis.fecha}T00:00:00`).getTime()));
+  const estado = montoDudoso || bancoDudoso || referenciaDudosa || !fechaValida ? "revisar" : "verificado";
   const motivos: string[] = [];
   if (montoDudoso && analysis.montoValidation.reason) motivos.push(`Monto: ${analysis.montoValidation.reason}`);
   if (bancoDudoso) motivos.push(`Banco sin confirmar (confianza ${Math.round(bancoId.confianza * 100)}%)`);
+  if (referenciaDudosa) motivos.push("Referencia no legible");
+  if (!fechaValida) motivos.push("Fecha no legible");
 
   const creado = await prisma.pago.create({
     data: {
@@ -379,7 +419,7 @@ async function procesarComprobante(
       imageData: Uint8Array.from(buffer),
       imageMime: mimeType,
       monto: analysis.monto ?? 0,
-      fechaPago: analysis.fecha ? new Date(`${analysis.fecha}T00:00:00`) : new Date(),
+      fechaPago: fechaValida ? new Date(`${analysis.fecha}T00:00:00`) : null,
       horaPago: analysis.hora,
       bancoDestino: analysis.bancoDestino,
       referencia,

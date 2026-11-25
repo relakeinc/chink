@@ -31,6 +31,7 @@ interface PagoModalProps {
 }
 
 export default function PagoModal({ open, onClose, initial, onSaved }: PagoModalProps) {
+  const canComplete = Boolean(initial && initial.estado === "revisar");
   const [clientes, setClientes] = useState<{ id: string; nombre: string }[]>([]);
   const [monto, setMonto] = useState("");
   const [bancoDestino, setBancoDestino] = useState("");
@@ -66,7 +67,7 @@ export default function PagoModal({ open, onClose, initial, onSaved }: PagoModal
   async function submit() {
     setError(null);
     const amount = Number(monto.replace(/[^0-9.]/g, ""));
-    if (!initial && (!Number.isFinite(amount) || amount <= 0)) {
+    if ((!initial || canComplete) && (!Number.isFinite(amount) || amount <= 0)) {
       setError("Indica un monto mayor que cero.");
       return;
     }
@@ -78,6 +79,14 @@ export default function PagoModal({ open, onClose, initial, onSaved }: PagoModal
           estado,
           notas: notas.trim() || undefined,
           clienteId: clienteId || undefined,
+          ...(canComplete ? {
+            monto: amount,
+            referencia: referencia.trim(),
+            bancoDestino: bancoDestino.trim(),
+            fuenteFondos: fuenteFondos.trim(),
+            fechaPago: fecha || undefined,
+            para: para.trim(),
+          } : {}),
         });
       } else {
         await api.createPago({
@@ -106,7 +115,7 @@ export default function PagoModal({ open, onClose, initial, onSaved }: PagoModal
     <Modal
       open={open}
       title={initial ? "Editar comprobante" : "Registrar pago"}
-      description={initial ? "Ajusta estado, cliente o notas del comprobante." : "Alta manual: lo del bot llega solo con foto."}
+      description={canComplete ? "Completa los datos que el bot no pudo leer de la foto." : initial ? "Ajusta estado, cliente o notas del comprobante." : "Alta manual: lo del bot llega solo con foto."}
       onClose={onClose}
       footer={
         <>
@@ -122,7 +131,7 @@ export default function PagoModal({ open, onClose, initial, onSaved }: PagoModal
       {error ? <p className="text-[12px] text-warn">{error}</p> : null}
 
       <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
-        {!initial ? (
+        {(!initial || canComplete) ? (
           <Field label="Monto (COP)">
             <input className={inputClass} value={monto} onChange={(e) => setMonto(e.target.value)} inputMode="decimal" placeholder="Ej: 250000" />
           </Field>
@@ -133,18 +142,18 @@ export default function PagoModal({ open, onClose, initial, onSaved }: PagoModal
         )}
 
         <Field label="Referencia">
-          <input className={inputClass} value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="Aprobación / CUS / ID" disabled={Boolean(initial)} />
+          <input className={inputClass} value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="Aprobación / CUS / ID" disabled={Boolean(initial && !canComplete)} />
         </Field>
 
         <Field label="Banco destino (recibe)">
-          <input className={inputClass} value={bancoDestino} onChange={(e) => setBancoDestino(e.target.value)} placeholder="Ej: Nequi" disabled={Boolean(initial)} />
+          <input className={inputClass} value={bancoDestino} onChange={(e) => setBancoDestino(e.target.value)} placeholder="Ej: Nequi" disabled={Boolean(initial && !canComplete)} />
         </Field>
 
         <Field label="Desde (origen)">
-          <input className={inputClass} value={fuenteFondos} onChange={(e) => setFuenteFondos(e.target.value)} placeholder="Ej: Bancolombia" disabled={Boolean(initial)} />
+          <input className={inputClass} value={fuenteFondos} onChange={(e) => setFuenteFondos(e.target.value)} placeholder="Ej: Bancolombia" disabled={Boolean(initial && !canComplete)} />
         </Field>
 
-        {!initial ? (
+        {(!initial || canComplete) ? (
           <>
             <Field label="Fecha">
               <input className={inputClass} type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />

@@ -109,30 +109,46 @@
   display: none;
 }
 
-/* Botones Trell — copia exacta de relake-site para la landing pública. */
+/* Los SVG de la landing tienen colores fijos; se aclaran sobre superficies oscuras. */
+[data-theme="dark"] [data-landing-scroll] :is(
+  [data-icon="package"],
+  [data-icon="mail"],
+  [data-icon="download-ink"],
+  [data-icon="shield-check"],
+  [data-icon="smartphone"],
+  [data-icon="warehouse-box"]
+) {
+  filter: brightness(0) invert(0.93);
+}
+
+/* Acciones principales de la landing, alineadas con la paleta Chink. */
 .trell-btn-primary {
   display: inline-flex;
   cursor: pointer;
   align-items: center;
   justify-content: center;
   border-radius: 0.5rem;
-  background-color: #2563eb;
-  background-image: linear-gradient(to bottom, #4d88f5, #2563eb);
+  background-color: var(--color-coal);
   padding-inline: 1.5rem;
   padding-block: 0.75rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #fff;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1), 0 0 0 calc(1px + 0px) rgba(37, 99, 235, 0.2);
+  color: var(--color-cream);
+  box-shadow: 0 2px 6px rgb(36 39 34 / 0.14);
   transition-property: color, background-color, border-color, opacity, box-shadow, transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
 
 .trell-btn-primary:hover {
-  opacity: 0.95;
+  background-color: var(--color-shell);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.15), 0 0 0 calc(1px + 0px) rgba(37, 99, 235, 0.3);
+  box-shadow: 0 6px 16px rgb(36 39 34 / 0.18);
+}
+
+.trell-btn-primary:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
 .trell-btn-primary:active {

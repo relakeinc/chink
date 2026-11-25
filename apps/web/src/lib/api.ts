@@ -454,7 +454,7 @@ export const api = {
     referencia?: string; fechaPago?: string; horaPago?: string; para?: string;
     numeroDestino?: string; numeroOrigen?: string; notas?: string;
   }) => request<{ data: PagoRow }>("/api/pagos", { method: "POST", body }),
-  updatePago: (id: string, body: { estado?: string; notas?: string; clienteId?: string | null }) =>
+  updatePago: (id: string, body: { estado?: string; notas?: string; clienteId?: string | null; monto?: number; referencia?: string; bancoDestino?: string; fuenteFondos?: string; fechaPago?: string; para?: string }) =>
     request<{ data: PagoRow }>(`/api/pagos/${id}`, { method: "PATCH", body }),
   deletePago: (id: string) => request<{ ok: boolean }>(`/api/pagos/${id}`, { method: "DELETE" }),
   getCierre: (fecha?: string) =>

@@ -13,6 +13,7 @@ import { Icon } from "@/components/ui/Icon";
 import Modal, { Field, inputClass } from "@/components/ui/Modal";
 import MovementModal from "@/components/forms/MovementModal";
 import { useNotice } from "@/lib/toast";
+import { useAuth } from "@/context/AuthContext";
 
 const VIEWS = [
   { id: "all", label: "Todos los productos" },
@@ -87,7 +88,12 @@ export default function Inventario() {
   const [showImages, setShowImages] = useState(false);
   const [showAdjust, setShowAdjust] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [busyProductId, setBusyProductId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const { showNotice } = useNotice();
+  const { can } = useAuth();
+  const canAdjust = can("adjust");
 
   const searchRef = useRef<HTMLInputElement>(null);
   useCommandK(searchRef);
@@ -150,6 +156,25 @@ export default function Inventario() {
       else next.add(id);
       return next;
     });
+  }
+
+  async function setArchived(product: Product, archived: boolean) {
+    if (archived && !window.confirm(`¿Eliminar «${product.name}» del catálogo? Podrás recuperarlo en Archivados.`)) return;
+    setBusyProductId(product.id);
+    try {
+      await api.updateProduct(product.id, { archived });
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+      showNotice(archived ? "Producto movido a Archivados." : "Producto restaurado.");
+      await load();
+    } catch (cause) {
+      showNotice(cause instanceof Error ? cause.message : "No se pudo actualizar el producto.", { variant: "warning", icon: "warning" });
+    } finally {
+      setBusyProductId(null);
+    }
   }
 
   function toggleColumn(id: string) {
@@ -352,20 +377,47 @@ export default function Inventario() {
         </Badge>
       ),
     },
+    {
+      key: "actions",
+      header: "Acciones",
+      width: "w-[138px]",
+      render: (row) => (
+        <span className="flex items-center gap-3" onClick={(event) => event.stopPropagation()}>
+          {canAdjust && view !== "archived" ? (
+            <button type="button" className="text-[11px] font-semibold text-ink hover:underline" onClick={() => { setEditingProduct(row); setShowEdit(true); }}>Editar</button>
+          ) : null}
+          {canAdjust ? <button type="button" disabled={busyProductId === row.id} className="text-[11px] font-semibold text-warn hover:underline disabled:opacity-50" onClick={() => void setArchived(row, view !== "archived")}>
+            {view === "archived" ? "Restaurar" : "Eliminar"}
+          </button> : <span className="text-[11px] text-muted">Solo lectura</span>}
+        </span>
+      ),
+    },
   ];
 
   const selectedCount = selected.size;
   const selectedProducts = rows.filter((row) => selected.has(row.id));
 
   async function archiveSelected() {
-    if (selectedProducts.length !== 1) return;
-    if (!window.confirm("¿Archivar este producto?")) return;
-    const product = selectedProducts[0];
-    if (!product) return;
-    await api.updateProduct(product.id, { archived: true });
-    setSelected(new Set());
-    showNotice("Producto archivado.");
-    await load();
+    if (!selectedProducts.length || bulkBusy) return;
+    const archived = view !== "archived";
+    const action = archived ? "eliminar" : "restaurar";
+    if (!window.confirm(`¿${action[0]!.toUpperCase()}${action.slice(1)} ${selectedProducts.length} producto${selectedProducts.length === 1 ? "" : "s"}?${archived ? " Podrás recuperarlos en Archivados." : ""}`)) return;
+    setBulkBusy(true);
+    try {
+      const results: PromiseSettledResult<unknown>[] = [];
+      for (let index = 0; index < selectedProducts.length; index += 4) {
+        const batch = selectedProducts.slice(index, index + 4);
+        results.push(...await Promise.allSettled(batch.map((product) => api.updateProduct(product.id, { archived }))));
+      }
+      const succeeded = selectedProducts.filter((_, index) => results[index]?.status === "fulfilled");
+      const failed = results.length - succeeded.length;
+      setSelected(new Set(selectedProducts.filter((_, index) => results[index]?.status === "rejected").map((product) => product.id)));
+      if (succeeded.length) showNotice(`${succeeded.length} producto${succeeded.length === 1 ? "" : "s"} ${archived ? (succeeded.length === 1 ? "movido a Archivados" : "movidos a Archivados") : (succeeded.length === 1 ? "restaurado" : "restaurados")}.`);
+      if (failed) showNotice(`No se pudieron actualizar ${failed} producto${failed === 1 ? "" : "s"}. Siguen seleccionados.`, { variant: "warning", icon: "warning" });
+      await load();
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   return (
@@ -448,7 +500,7 @@ export default function Inventario() {
           aria-hidden={selectedCount === 0}
         >
           <div className={`overflow-hidden ${selectedCount === 0 ? "pointer-events-none" : ""}`}>
-            <div className="flex items-center gap-[14px] bg-success-bg px-[20px] py-[9px]">
+            <div className="flex flex-wrap items-center gap-[14px] bg-success-bg px-[20px] py-[9px]">
               <Checkbox checked onChange={() => setSelected(new Set())} />
               <span className="text-[11px] font-semibold leading-[1.4] text-accent">
                 {selectedCount === 1 ? "1 producto seleccionado" : `${selectedCount} productos seleccionados`}
@@ -460,8 +512,8 @@ export default function Inventario() {
               <button type="button" onClick={adjustSelected} className="text-[11px] text-accent-text transition-colors hover:text-accent">
                 Ajustar stock
               </button>
-              {selectedCount === 1 ? <button type="button" onClick={() => setShowEdit(true)} className="text-[11px] text-accent-text transition-colors hover:text-accent">Editar</button> : null}
-              {selectedCount === 1 ? <button type="button" onClick={() => void archiveSelected()} className="text-[11px] text-accent-text transition-colors hover:text-accent">Archivar</button> : null}
+              {canAdjust && selectedCount === 1 ? <button type="button" onClick={() => setShowEdit(true)} className="text-[11px] text-accent-text transition-colors hover:text-accent">Editar</button> : null}
+              {canAdjust ? <button type="button" disabled={bulkBusy} onClick={() => void archiveSelected()} className="text-[11px] text-accent-text transition-colors hover:text-accent disabled:opacity-50">{view === "archived" ? "Restaurar seleccionados" : "Eliminar seleccionados"}</button> : null}
               <button type="button" onClick={printLabels} className="text-[11px] text-accent-text transition-colors hover:text-accent">
                 Imprimir etiqueta
               </button>
@@ -508,7 +560,7 @@ export default function Inventario() {
         onClose={() => setShowAdjust(false)}
         onDone={load}
       />
-      {selectedProducts[0] ? <EditProductModal open={showEdit} product={selectedProducts[0]} onClose={() => setShowEdit(false)} onUpdated={async () => { setShowEdit(false); setSelected(new Set()); await load(); }} /> : null}
+      {(editingProduct ?? selectedProducts[0]) ? <EditProductModal open={showEdit} product={(editingProduct ?? selectedProducts[0])!} onClose={() => { setShowEdit(false); setEditingProduct(null); }} onUpdated={async () => { setShowEdit(false); setEditingProduct(null); setSelected(new Set()); await load(); }} /> : null}
     </>
   );
 }
