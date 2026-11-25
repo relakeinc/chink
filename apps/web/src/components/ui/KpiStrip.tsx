@@ -20,7 +20,7 @@ export interface KpiStripProps {
  */
 export default function KpiStrip({ items, tileLast = false }: KpiStripProps) {
   return (
-    <div className="grid min-h-[87px] grid-cols-2 gap-x-[16px] gap-y-[18px] rounded-[10px] bg-canvas px-[22px] py-[18px] md:flex md:gap-0">
+    <div className="grid min-h-[87px] grid-cols-2 gap-x-[16px] gap-y-[18px] rounded-[10px] bg-canvas px-[22px] py-[18px] md:flex md:gap-0 mb-[20px]">
       {items.map((item, index) => {
         const isFirst = index === 0;
         const isLast = index === items.length - 1;

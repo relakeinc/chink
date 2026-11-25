@@ -13,6 +13,22 @@ function periodDate(value: string | undefined, fallback: Date): Date {
 export const reportRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.requirePermission("report"));
 
+  /** Margen estimado de salidas, según los precios actuales del catálogo. */
+  app.get("/profit", async (request) => {
+    const ws = await workspaceIdFor(request);
+    const query = request.query as { from?: string; to?: string };
+    const from = query.from ? periodDate(query.from, new Date()) : undefined;
+    const to = query.to ? new Date(`${query.to}T23:59:59.999Z`) : undefined;
+    const exits = await prisma.stockMovement.findMany({
+      where: { workspaceId: ws, type: "EXIT", ...(from || to ? { createdAt: { gte: from, lte: to } } : {}) },
+      select: { quantity: true, product: { select: { unitCost: true, salePrice: true } } },
+    });
+    const priced = exits.filter((row) => Number(row.product.salePrice) > 0);
+    const revenue = priced.reduce((sum, row) => sum + Math.abs(row.quantity) * Number(row.product.salePrice), 0);
+    const cost = priced.reduce((sum, row) => sum + Math.abs(row.quantity) * Number(row.product.unitCost), 0);
+    return { revenue, cost, profit: revenue - cost, movements: priced.length, unpriced: exits.length - priced.length };
+  });
+
   /** KPIs de la cabecera de Reportes. */
   app.get("/summary", async (request) => {
     const ws = await workspaceIdFor(request);

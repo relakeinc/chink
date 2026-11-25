@@ -39,10 +39,10 @@ test("un espacio nuevo queda aislado y permite crear, vender y proyectar el stoc
   const warehouseId = warehouses.body.data[0].id as string;
 
   const product = await call("POST", "/api/inventory/products", token, {
-    sku: "ARR-DIA-500", name: "Arroz Diana 500 g", category: "Abarrotes", stock: 25, minStock: 5, unitCost: 2200,
+    sku: "ARR-DIA-500", name: "Arroz Diana 500 g", category: "Abarrotes", stock: 25, minStock: 5, unitCost: 2200, salePrice: 3000,
   });
   expect(product.status).toBe(201);
-  expect(product.body.data).toMatchObject({ stock: 25, minStock: 5, unitCost: 2200, warehouse: "Principal" });
+  expect(product.body.data).toMatchObject({ stock: 25, minStock: 5, unitCost: 2200, salePrice: 3000, warehouse: "Principal" });
   const productId = product.body.data.id as string;
 
   const exit = await call("POST", "/api/movements", token, { type: "EXIT", productId, quantity: 5, originId: warehouseId });
@@ -57,6 +57,7 @@ test("un espacio nuevo queda aislado y permite crear, vender y proyectar el stoc
   expect(forecast.status).toBe(200);
   expect(forecast.body.data.find((row: any) => row.productId === productId)).toMatchObject({ unitsSold: 5, daysToMinimum: 3 });
   const rotation = await call("GET", "/api/reports/rotation", token);
+  expect((await call("GET", "/api/reports/profit", token)).body).toMatchObject({ revenue: 15000, cost: 11000, profit: 4000 });
   expect(rotation.body.top[0].productId).toBe(productId);
   expect(rotation.body.slow[0].productId).toBe(productId);
   const audit = await call("GET", "/api/audit/products", token);

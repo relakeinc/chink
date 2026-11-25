@@ -818,7 +818,7 @@ function EditProductImagesModal({
 }
 
 function AddProductModal({ open, warehouses, onClose, onCreated }: { open: boolean; warehouses: InventorySummary["warehouses"]; onClose: () => void; onCreated: () => Promise<void> }) {
-  const [form, setForm] = useState({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0", warehouseId: "" });
+  const [form, setForm] = useState({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0", salePrice: "0", warehouseId: "" });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -834,7 +834,7 @@ function AddProductModal({ open, warehouses, onClose, onCreated }: { open: boole
   }, [preview]);
 
   function resetAll() {
-    setForm({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0", warehouseId: "" });
+    setForm({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0", salePrice: "0", warehouseId: "" });
     setImageFile(null);
     setPreview(null);
     setError(null);
@@ -857,16 +857,21 @@ function AddProductModal({ open, warehouses, onClose, onCreated }: { open: boole
 
   async function submit() {
     setError(null);
+    if (!form.sku.trim() || !form.name.trim()) {
+      setError("Indica el código y el nombre del producto.");
+      return;
+    }
     setSaving(true);
     try {
       const created = await api.createProduct({
         sku: form.sku.trim(),
         name: form.name.trim(),
-        category: form.category.trim(),
+        category: form.category.trim() || "General",
         stock: Number(form.stock) || 0,
         reserved: Number(form.reserved) || 0,
         minStock: Number(form.minStock) || 0,
         unitCost: Number(String(form.unitCost).replace(",", ".")) || 0,
+        salePrice: Number(String(form.salePrice).replace(",", ".")) || 0,
         warehouseId: form.warehouseId || undefined,
       });
 
@@ -930,8 +935,11 @@ function AddProductModal({ open, warehouses, onClose, onCreated }: { open: boole
         <Field label="Categoría">
           <input className={inputClass} value={form.category} onChange={update("category")} placeholder="Embalaje" />
         </Field>
-        <Field label="Coste por unidad (COP)">
+        <Field label="Precio de compra por unidad (COP)">
           <input className={inputClass} value={form.unitCost} onChange={update("unitCost")} inputMode="decimal" />
+        </Field>
+        <Field label="Precio de venta por unidad (COP)">
+          <input className={inputClass} value={form.salePrice} onChange={update("salePrice")} inputMode="decimal" />
         </Field>
         <Field label="Stock">
           <input className={inputClass} value={form.stock} onChange={update("stock")} inputMode="numeric" />
@@ -975,19 +983,19 @@ function AddProductModal({ open, warehouses, onClose, onCreated }: { open: boole
 }
 
 function EditProductModal({ open, product, onClose, onUpdated }: { open: boolean; product: Product; onClose: () => void; onUpdated: () => Promise<void> }) {
-  const [form, setForm] = useState({ name: product.name, category: product.category, unitCost: String(product.unitCost), minStock: String(product.minStock) });
+  const [form, setForm] = useState({ name: product.name, category: product.category, unitCost: String(product.unitCost), salePrice: String(product.salePrice), minStock: String(product.minStock) });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showNotice } = useNotice();
 
   useEffect(() => {
-    if (open) setForm({ name: product.name, category: product.category, unitCost: String(product.unitCost), minStock: String(product.minStock) });
+    if (open) setForm({ name: product.name, category: product.category, unitCost: String(product.unitCost), salePrice: String(product.salePrice), minStock: String(product.minStock) });
   }, [open, product]);
 
   async function submit() {
     setSaving(true); setError(null);
     try {
-      await api.updateProduct(product.id, { name: form.name.trim(), category: form.category.trim(), unitCost: Number(form.unitCost.replace(",", ".")), minStock: Number(form.minStock) || 0 });
+      await api.updateProduct(product.id, { name: form.name.trim(), category: form.category.trim(), unitCost: Number(form.unitCost.replace(",", ".")), salePrice: Number(form.salePrice.replace(",", ".")), minStock: Number(form.minStock) || 0 });
       showNotice("Producto actualizado.");
       await onUpdated();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo actualizar el producto"); }
@@ -999,7 +1007,8 @@ function EditProductModal({ open, product, onClose, onUpdated }: { open: boolean
     <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
       <Field label="Nombre"><input className={inputClass} value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} /></Field>
       <Field label="Categoría"><input className={inputClass} value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} /></Field>
-      <Field label="Coste por unidad (COP)"><input className={inputClass} value={form.unitCost} onChange={(e) => setForm((p) => ({ ...p, unitCost: e.target.value }))} inputMode="decimal" /></Field>
+      <Field label="Precio de compra (COP)"><input className={inputClass} value={form.unitCost} onChange={(e) => setForm((p) => ({ ...p, unitCost: e.target.value }))} inputMode="decimal" /></Field>
+      <Field label="Precio de venta (COP)"><input className={inputClass} value={form.salePrice} onChange={(e) => setForm((p) => ({ ...p, salePrice: e.target.value }))} inputMode="decimal" /></Field>
       <Field label="Stock mínimo"><input className={inputClass} value={form.minStock} onChange={(e) => setForm((p) => ({ ...p, minStock: e.target.value }))} inputMode="numeric" /></Field>
     </div>
   </Modal>;

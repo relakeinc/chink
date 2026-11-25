@@ -39,6 +39,7 @@ interface ProductDto {
   reserved: number;
   available: number;
   unitCost: number;
+  salePrice: number;
   totalValue: number;
   status: ProductStatus;
   icon: string;
@@ -62,6 +63,7 @@ function toProductDto(product: ProductWithLocations): ProductDto {
     reserved: product.reserved,
     available: Math.max(product.stock - product.reserved, 0),
     unitCost: Number(product.unitCost),
+    salePrice: Number(product.salePrice),
     totalValue: Number(product.totalValue),
     status: product.status,
     icon: product.icon,
@@ -96,6 +98,7 @@ const productBodySchema = {
     stock: { type: "integer", minimum: 0 },
     reserved: { type: "integer", minimum: 0, default: 0 },
     unitCost: { type: "number", minimum: 0 },
+    salePrice: { type: "number", minimum: 0 },
     minStock: { type: "integer", minimum: 0, default: 0 },
     status: { type: "string", enum: ["IN_STOCK", "LOW_STOCK"] },
     icon: { type: "string", default: "package" },
@@ -112,6 +115,7 @@ const productPatchSchema = {
     category: { type: "string", minLength: 1 },
     reserved: { type: "integer", minimum: 0 },
     unitCost: { type: "number", minimum: 0 },
+    salePrice: { type: "number", minimum: 0 },
     minStock: { type: "integer", minimum: 0 },
     status: { type: "string", enum: ["IN_STOCK", "LOW_STOCK"] },
     archived: { type: "boolean" },
@@ -300,6 +304,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       stock: number;
       reserved?: number;
       unitCost: number;
+      salePrice?: number;
       minStock?: number;
       status?: ProductStatus;
       icon?: string;
@@ -349,6 +354,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
             stock: body.stock,
             reserved,
             unitCost: body.unitCost,
+            salePrice: body.salePrice ?? 0,
             totalValue,
             minStock,
             status,
@@ -366,7 +372,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
             productSku: product.sku,
             productName: product.name,
             action: "CREATED",
-            changes: { sku: product.sku, name: product.name, category: product.category, unitCost: Number(product.unitCost), minStock: product.minStock },
+            changes: { sku: product.sku, name: product.name, category: product.category, unitCost: Number(product.unitCost), salePrice: Number(product.salePrice), minStock: product.minStock },
             actorId: request.user.id,
           },
         });
@@ -440,6 +446,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       category: string;
       reserved: number;
       unitCost: number;
+      salePrice: number;
       minStock: number;
       status: ProductStatus;
       archived: boolean;
@@ -453,6 +460,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
 
     const reserved = body.reserved ?? existing.reserved;
     const unitCost = body.unitCost ?? Number(existing.unitCost);
+    const salePrice = body.salePrice ?? Number(existing.salePrice);
     const minStock = body.minStock ?? existing.minStock;
     const status = body.status ?? (minStock > 0 && existing.stock <= minStock ? "LOW_STOCK" : "IN_STOCK");
 
@@ -479,6 +487,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       category: body.category ?? existing.category,
       reserved,
       unitCost,
+      salePrice,
       minStock,
       status,
       icon: body.icon ?? existing.icon,
@@ -486,8 +495,8 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
       imageKey,
       imageUrl,
     };
-    for (const key of ["name", "category", "reserved", "unitCost", "minStock", "status", "icon", "archived", "imageKey"] as const) {
-      const from = key === "unitCost" ? Number(existing.unitCost) : existing[key];
+    for (const key of ["name", "category", "reserved", "unitCost", "salePrice", "minStock", "status", "icon", "archived", "imageKey"] as const) {
+      const from = key === "unitCost" || key === "salePrice" ? Number(existing[key]) : existing[key];
       const to = nextValues[key];
       if (from !== to) changes[key] = { from: from as Prisma.InputJsonValue, to: to as Prisma.InputJsonValue };
     }
@@ -501,6 +510,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
           category: body.category,
           reserved,
           unitCost,
+          salePrice,
           minStock,
           totalValue: Number((existing.stock * unitCost).toFixed(2)),
           status,

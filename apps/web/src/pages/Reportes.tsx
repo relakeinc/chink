@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import type { ExportableReport, RotationRow, SalesRateRow } from "@/lib/api";
 import { useAsync, ErrorBlock, LoadingBlock } from "@/lib/useAsync";
-import { formatPercent, formatUnits } from "@/lib/format";
+import { formatCOP, formatPercent, formatUnits } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import { printReport } from "@/lib/print";
 import KpiStrip, { KpiValue, PageFooter, PageHeader } from "@/components/ui/KpiStrip";
@@ -29,6 +29,7 @@ export default function Reportes() {
   const weekly = useAsync(() => api.getWeekly(params), [range.from, range.to]);
   const rotation = useAsync(() => api.getRotation(params), [range.from, range.to]);
   const salesRate = useAsync(() => api.getSalesRate(params), [range.from, range.to]);
+  const profit = useAsync(() => api.getProfit(params), [range.from, range.to]);
 
   const reports: ExportableReport[] = exports.data?.data ?? [];
   const filtered = format ? reports.filter((r) => r.format.includes(format)) : reports;
@@ -149,6 +150,11 @@ export default function Reportes() {
       />
 
       {summary.error ? <ErrorBlock message={summary.error} onRetry={() => void summary.reload()} /> : summary.loading ? <LoadingBlock variant="kpi" /> : <KpiStrip items={kpis} />}
+      {categories.error ? <ErrorBlock message={`Categorías: ${categories.error}`} onRetry={() => void categories.reload()} /> : null}
+      {weekly.error ? <ErrorBlock message={`Movimientos: ${weekly.error}`} onRetry={() => void weekly.reload()} /> : null}
+      {exports.error ? <ErrorBlock message={`Reportes exportables: ${exports.error}`} onRetry={() => void exports.reload()} /> : null}
+
+      {profit.error ? <ErrorBlock message={profit.error} onRetry={() => void profit.reload()} /> : profit.data ? <Card className="mb-[20px] grid gap-[16px] p-[20px] sm:grid-cols-3"><div><p className="text-[11px] text-muted">Ventas estimadas</p><strong className="text-[20px] text-ink">{formatCOP(profit.data.revenue)}</strong></div><div><p className="text-[11px] text-muted">Costo de lo vendido</p><strong className="text-[20px] text-ink">{formatCOP(profit.data.cost)}</strong></div><div><p className="text-[11px] text-muted">Ganancia estimada</p><strong className="text-[20px] text-ink">{formatCOP(profit.data.profit)}</strong></div><p className="text-[11px] text-muted sm:col-span-3">Cálculo con precios actuales; no incluye gastos ni impuestos. {profit.data.unpriced > 0 ? `${profit.data.unpriced} salidas sin precio de venta no se incluyen.` : ""}</p></Card> : null}
 
       <div className="flex flex-col gap-[20px]">
         <div className="flex flex-col gap-[20px] xl:flex-row">

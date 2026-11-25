@@ -169,6 +169,7 @@ model Product {
   stock      Int           @default(0)
   reserved   Int           @default(0)
   unitCost   Decimal       @db.Decimal(14, 2)
+  salePrice  Decimal       @default(0) @db.Decimal(14, 2)
   totalValue Decimal       @db.Decimal(16, 2)
   status     ProductStatus @default(IN_STOCK)
   archived   Boolean       @default(false)

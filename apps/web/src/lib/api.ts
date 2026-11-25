@@ -107,6 +107,7 @@ export interface Product {
   reserved: number;
   available: number;
   unitCost: number;
+  salePrice: number;
   totalValue: number;
   status: ProductStatus;
   icon: string;
@@ -438,6 +439,7 @@ export const api = {
 
   /* Reportes */
   getReportSummary: () => request<ReportSummary>("/api/reports/summary"),
+  getProfit: (params?: QueryParams) => request<{ revenue: number; cost: number; profit: number; movements: number; unpriced: number }>("/api/reports/profit", { params }),
   getCategories: () => request<{ total: number; data: CategoryRow[] }>("/api/reports/categories"),
   getExports: () => request<{ data: ExportableReport[] }>("/api/reports/exports"),
   getLowStock: () =>
