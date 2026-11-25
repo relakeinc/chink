@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import type { SettingsData } from "@/lib/api";
-import { useAsync } from "@/lib/useAsync";
+import { useNavigate } from "react-router-dom";
+import { api, setToken } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { connectRealtime } from "@/lib/realtime";
 import { showNotice } from "@/lib/toast";
-import { WORKSPACE_MARKS, workspaceMark, notifyWorkspaceUpdated } from "@/lib/workspace";
+import { WORKSPACE_MARKS, notifyWorkspaceUpdated } from "@/lib/workspace";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/primitives";
 
@@ -17,30 +18,19 @@ const STEPS = ["Espacio", "Contacto", "Icono", "Resumen"] as const;
  * Móvil a pantalla completa; en escritorio, tarjeta centrada.
  */
 export default function WorkspaceOnboarding({ open, onClose }: { open: boolean; onClose: () => void }) {
-  // Sin `live`: el asistente es un borrador; no debe resetearse a mitad.
-  const settings = useAsync(() => api.getSettings(), [], { live: false });
+  const { refresh, user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({ spaceName: "", legalName: "", contactEmail: "", taxId: "", spaceMark: "workspace-mark" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Al abrir, parte de los datos actuales.
+  // Un espacio nuevo comienza vacío y con su propio almacén principal.
   useEffect(() => {
     if (!open) return;
     setStep(0);
     setError(null);
-    const current = settings.data?.data;
-    if (current) {
-      setForm({
-        spaceName: current.spaceName,
-        legalName: current.legalName,
-        contactEmail: current.contactEmail,
-        taxId: current.taxId,
-        spaceMark: workspaceMark(current.spaceMark),
-      });
-    }
-    // Solo al abrir.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setForm({ spaceName: "", legalName: "", contactEmail: user?.email ?? "", taxId: "", spaceMark: "workspace-mark" });
   }, [open]);
 
   if (!open) return null;
@@ -57,17 +47,20 @@ export default function WorkspaceOnboarding({ open, onClose }: { open: boolean; 
     }
     setSaving(true);
     try {
-      await api.updateSettings({
+      const session = await api.createSpace({
         spaceName: form.spaceName.trim(),
         legalName: form.legalName.trim(),
         contactEmail: form.contactEmail.trim(),
         taxId: form.taxId.trim(),
         spaceMark: form.spaceMark,
-      } as Partial<SettingsData>);
-      await settings.reload();
+      });
+      setToken(session.token);
+      await refresh();
+      connectRealtime();
       notifyWorkspaceUpdated();
-      showNotice("Espacio listo. ¡A trabajar!");
+      showNotice("Espacio nuevo creado. Ya puedes registrar productos.");
       onClose();
+      navigate("/inicio", { replace: true });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar el espacio");
     } finally {

@@ -88,15 +88,18 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
       where: { id: body.productId, workspaceId: await workspaceIdFor(request) },
       include: { locations: true },
     });
-    if (!product) return reply.status(404).send({ error: "Producto no encontrado" });
+    if (!product || product.archived) return reply.status(404).send({ error: "Producto no encontrado" });
     const ws = product.workspaceId;
     const settings = await prisma.workspaceSetting.findUnique({ where: { id: ws }, select: { allowNegativeStock: true } });
 
-    if (body.type === "TRANSFER" && !body.destinationId) {
-      return reply.status(400).send({ error: "Una transferencia necesita un almacén de destino" });
+    if ((body.type === "ENTRY" || body.type === "TRANSFER") && !body.destinationId) {
+      return reply.status(400).send({ error: "Indica el almacén de destino" });
     }
-    if ((body.type === "ENTRY" || body.type === "EXIT" || body.type === "ADJUSTMENT") && !body.originId && body.type !== "ENTRY") {
+    if ((body.type === "EXIT" || body.type === "TRANSFER" || body.type === "ADJUSTMENT") && !body.originId) {
       return reply.status(400).send({ error: "Indica el almacén afectado" });
+    }
+    if (body.type === "TRANSFER" && body.originId === body.destinationId) {
+      return reply.status(400).send({ error: "El origen y el destino deben ser distintos" });
     }
 
     // Los almacenes del movimiento deben pertenecer al espacio de la sesión.
@@ -243,16 +246,14 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
     const created = rangeFilter(query.from, query.to);
     const ws = await workspaceIdFor(request);
 
-    // Los filtros opcionales se combinan en un único OR: antes el segundo
-    // machacaba al primero cuando venían almacén y búsqueda a la vez.
-    const ors: Prisma.StockMovementWhereInput[] = [];
-    if (query.warehouse) ors.push({ origin: { code: query.warehouse } }, { destination: { code: query.warehouse } });
+    const filters: Prisma.StockMovementWhereInput[] = [];
+    if (query.warehouse) filters.push({ OR: [{ origin: { code: query.warehouse } }, { destination: { code: query.warehouse } }] });
     if (search) {
-      ors.push(
+      filters.push({ OR: [
         { ref: { contains: search, mode: "insensitive" } },
         { product: { name: { contains: search, mode: "insensitive" } } },
         { product: { sku: { contains: search, mode: "insensitive" } } },
-      );
+      ] });
     }
 
     const where: Prisma.StockMovementWhereInput = {
@@ -260,10 +261,10 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
       ...(query.type ? { type: query.type } : {}),
       ...(query.owner ? { owner: { email: query.owner } } : {}),
       ...(created ?? {}),
-      ...(ors.length > 0 ? { OR: ors } : {}),
+      ...(filters.length > 0 ? { AND: filters } : {}),
     };
 
-    const [total, rows, typeCounts] = await Promise.all([
+    const [total, rows, typeCounts, ownerRows] = await Promise.all([
       prisma.stockMovement.count({ where }),
       prisma.stockMovement.findMany({
         where,
@@ -273,6 +274,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
         include: { product: true, owner: true, origin: true, destination: true },
       }),
       prisma.stockMovement.groupBy({ by: ["type"], _count: true, _sum: { quantity: true }, where: { workspaceId: ws } }),
+      prisma.stockMovement.findMany({ where: { workspaceId: ws }, distinct: ["ownerId"], select: { owner: { select: { email: true, name: true } } } }),
     ]);
 
     return {
@@ -286,7 +288,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
         sku: row.product.sku,
         imageUrl: row.product.imageUrl,
         quantity: row.quantity,
-        route: row.note ?? "—",
+        route: [row.origin?.name, row.destination?.name].filter(Boolean).join(" → ") || row.note || "—",
         owner: row.owner.name,
         status: row.status === "CONFIRMED" ? "Confirmado" : "Pendiente",
       })),
@@ -294,6 +296,7 @@ export const movementRoutes: FastifyPluginAsync = async (app) => {
         total,
         page,
         pageSize,
+        owners: ownerRows.map((row) => ({ email: row.owner.email, name: row.owner.name })),
         totalPages: Math.max(Math.ceil(total / pageSize), 1),
         counts: {
           all: typeCounts.reduce((acc, c) => acc + c._count, 0),

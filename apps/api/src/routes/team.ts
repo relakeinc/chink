@@ -53,6 +53,41 @@ async function sendMemberNoticeEmail(
 }
 
 export const teamRoutes: FastifyPluginAsync = async (app) => {
+  /** Crea un espacio independiente para el usuario actual. */
+  app.post("/spaces", { schema: { body: {
+    type: "object", required: ["spaceName"], additionalProperties: false,
+    properties: {
+      spaceName: { type: "string", minLength: 2, maxLength: 80 },
+      legalName: { type: "string", maxLength: 120 },
+      contactEmail: { type: "string", maxLength: 120 },
+      taxId: { type: "string", maxLength: 60 },
+      spaceMark: { type: "string", maxLength: 60 },
+    },
+  } } }, async (request, reply) => {
+    const body = request.body as { spaceName: string; legalName?: string; contactEmail?: string; taxId?: string; spaceMark?: string };
+    const spaceName = body.spaceName.trim();
+    if (spaceName.length < 2) return reply.status(400).send({ error: "El nombre debe tener al menos 2 caracteres" });
+    const role = await prisma.role.findFirst({ where: { name: "Administradora" }, select: { id: true } });
+    if (!role) return reply.status(500).send({ error: "Roles sin inicializar" });
+    const workspaceId = crypto.randomUUID();
+    await prisma.$transaction(async (tx) => {
+      await tx.workspaceSetting.create({ data: {
+        id: workspaceId, spaceName, spaceColor: "#242722", spaceMark: body.spaceMark || "workspace-mark",
+        legalName: body.legalName?.trim() || "", contactEmail: body.contactEmail?.trim() || request.user.email,
+        taxId: body.taxId?.trim() || "", language: "Español (España)", currency: "Peso colombiano · COP ($)",
+        timezone: "America / Bogota (UTC-05:00)", dateFormat: "DD/MM/AAAA", unit: "Unidad (u.)",
+        movementPrefix: "MOV-", defaultMinStock: 10,
+      } });
+      const warehouse = await tx.warehouse.create({ data: {
+        workspaceId, code: "PRINCIPAL", name: "Principal", location: "Principal", address: "", capacity: 100000, position: 1,
+      } });
+      await tx.workspaceSetting.update({ where: { id: workspaceId }, data: { defaultWarehouseId: warehouse.id } });
+      await tx.spaceMember.create({ data: { workspaceId, userId: request.user.id, roleId: role.id, status: "ACTIVE" } });
+      await tx.user.update({ where: { id: request.user.id }, data: { workspaceId, roleId: role.id } });
+    });
+    const { session, permissions } = await membershipSession(request.user.id, workspaceId);
+    return reply.status(201).send({ token: app.jwt.sign(session, { expiresIn: "12h" }), user: session, permissions });
+  });
   /**
    * Invita a un miembro. La cuenta nace en estado PENDING: no puede iniciar
    * sesión hasta que se active (así lo refleja la matriz de permisos).

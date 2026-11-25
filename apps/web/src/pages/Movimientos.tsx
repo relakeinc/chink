@@ -23,6 +23,7 @@ const TOGGLEABLE_COLUMNS = [
   { key: "route", label: "Origen → Destino" },
   { key: "owner", label: "Responsable" },
 ];
+const MOVEMENT_TYPES: Record<string, string> = { entrada: "ENTRY", salida: "EXIT", transferencia: "TRANSFER", ajuste: "ADJUSTMENT" };
 
 export default function Movimientos() {
   const [params] = useSearchParams();
@@ -45,7 +46,7 @@ export default function Movimientos() {
   const list = useAsync(
     () =>
       api.getMovements({
-        view: view === "all" ? undefined : view.toUpperCase(),
+        type: MOVEMENT_TYPES[view],
         search,
         warehouse,
         owner,
@@ -189,12 +190,7 @@ export default function Movimientos() {
             placeholder="Responsable"
             value={owner}
             onChange={(value) => { setOwner(value); setPage(1); }}
-            options={[
-              { value: "lucia@chink.es", label: "Lucía Martín" },
-              { value: "diego@chink.es", label: "Diego Pérez" },
-              { value: "ana@chink.es", label: "Ana López" },
-              { value: "carlos@chink.es", label: "Carlos Ruiz" },
-            ]}
+            options={(list.data?.meta.owners ?? []).map((item) => ({ value: item.email, label: item.name }))}
           />
 
           <div className="relative flex min-w-px flex-1 items-start justify-end">

@@ -135,6 +135,7 @@ export interface ListMeta {
 
 export interface SessionUser {
   id: string;
+  workspaceId: string;
   email: string;
   name: string;
   initials: string;
@@ -357,7 +358,7 @@ export const api = {
   getMovements: (params?: QueryParams) =>
     request<{
       data: MovementRow[];
-      meta: ListMeta & { counts: Record<string, number>; net: number };
+      meta: ListMeta & { counts: Record<string, number>; net: number; owners: { email: string; name: string }[] };
     }>("/api/movements", { params }),
   getMovementsSummary: (params?: QueryParams) => request<MovementSummary>("/api/movements/summary", { params }),
   getWeekly: (params?: QueryParams) => request<{ data: BarPoint[] }>("/api/movements/weekly", { params }),
@@ -418,6 +419,8 @@ export const api = {
     request<{
       data: { id: string; name: string; mark: string; color: string; role: string; status: string; active: boolean }[];
     }>("/api/team/spaces"),
+  createSpace: (body: { spaceName: string; legalName?: string; contactEmail?: string; taxId?: string; spaceMark?: string }) =>
+    request<{ token: string; user: SessionUser; permissions: string[] }>("/api/team/spaces", { method: "POST", body, silent: true }),
   setActiveSpace: (workspaceId: string) =>
     request<{ token: string; user: SessionUser; permissions: string[] }>("/api/team/active-space", {
       method: "PATCH",

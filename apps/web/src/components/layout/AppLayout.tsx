@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import MobileNav from "./MobileNav";
 import MobileSearchBar from "./MobileSearchBar";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * Shell de la aplicación.
@@ -13,6 +14,7 @@ import MobileSearchBar from "./MobileSearchBar";
  * sangre (sin márgenes laterales) y el dock flotante lleva la navegación.
  */
 export default function AppLayout() {
+  const { user } = useAuth();
   return (
     <div className="h-screen w-full overflow-hidden bg-canvas">
       <Sidebar />
@@ -24,7 +26,7 @@ export default function AppLayout() {
         <div className="flex h-full flex-col overflow-hidden rounded-tl-[10px] rounded-tr-[10px] bg-subtle">
           <div className="scroll-thin min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-[16px] pt-[10px] pb-[96px] md:px-[20px] md:pb-[20px]">
             <div className="flex flex-col gap-[20px]">
-              <Outlet />
+              <div key={user?.workspaceId ?? "sin-espacio"}><Outlet /></div>
             </div>
           </div>
         </div>

@@ -551,7 +551,7 @@ export default function Inventario() {
         right={`COP · ${formatPercent(summary.totalStock > 0 ? (summary.available / summary.totalStock) * 100 : 0)} disponible`}
       />
 
-      <AddProductModal open={showAdd} onClose={() => setShowAdd(false)} onCreated={load} />
+      <AddProductModal open={showAdd} warehouses={summary.warehouses} onClose={() => setShowAdd(false)} onCreated={load} />
       <EditProductImagesModal open={showImages} products={selectedProducts} onClose={() => setShowImages(false)} onUpdated={load} />
       <MovementModal
         open={showAdjust}
@@ -817,8 +817,8 @@ function EditProductImagesModal({
   );
 }
 
-function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => Promise<void> }) {
-  const [form, setForm] = useState({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0" });
+function AddProductModal({ open, warehouses, onClose, onCreated }: { open: boolean; warehouses: InventorySummary["warehouses"]; onClose: () => void; onCreated: () => Promise<void> }) {
+  const [form, setForm] = useState({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0", warehouseId: "" });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -834,7 +834,7 @@ function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose:
   }, [preview]);
 
   function resetAll() {
-    setForm({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0" });
+    setForm({ sku: "", name: "", category: "", stock: "0", reserved: "0", minStock: "0", unitCost: "0", warehouseId: "" });
     setImageFile(null);
     setPreview(null);
     setError(null);
@@ -867,6 +867,7 @@ function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose:
         reserved: Number(form.reserved) || 0,
         minStock: Number(form.minStock) || 0,
         unitCost: Number(String(form.unitCost).replace(",", ".")) || 0,
+        warehouseId: form.warehouseId || undefined,
       });
 
       if (imageFile) {
@@ -940,6 +941,9 @@ function AddProductModal({ open, onClose, onCreated }: { open: boolean; onClose:
         </Field>
         <Field label="Stock mínimo">
           <input className={inputClass} value={form.minStock} onChange={update("minStock")} inputMode="numeric" />
+        </Field>
+        <Field label="Almacén inicial">
+          <FilterSelect label="Almacén inicial" tone="light" value={form.warehouseId} onChange={(value) => setForm((current) => ({ ...current, warehouseId: value }))} options={warehouses.map((item) => ({ value: item.id, label: item.name }))} placeholder="Principal (predeterminado)" />
         </Field>
         <div className="col-span-2 flex flex-col gap-[6px]">
           <span className="text-[11px] font-medium text-ink">Foto del producto (opcional)</span>

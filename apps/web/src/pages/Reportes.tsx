@@ -220,10 +220,10 @@ export default function Reportes() {
 
         <Card className="min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-[8px] px-[20px] pb-[12px] pt-[18px]">
-            <SectionHeader title="Se agota pronto" subtitle={`Ritmo de ventas de los últimos ${salesRate.data?.period.days ?? 30} días`} />
+            <SectionHeader title="Se agota pronto" subtitle={`Salidas de los últimos ${salesRate.data?.period.days ?? 30} días · promedio desde la primera venta`} />
             <span className="text-[11px] text-muted">Aviso con {salesRate.data?.warningDays ?? 7} días de anticipación</span>
           </div>
-          {salesRate.error ? <ErrorBlock message={salesRate.error} onRetry={() => void salesRate.reload()} /> : salesRate.loading ? <LoadingBlock /> : salesRate.data?.data.length ? <DataTable columns={salesRateColumns} rows={salesRate.data.data} rowKey={(row) => row.productId} rowHeight={48} /> : <p className="px-[20px] pb-[20px] text-[12px] text-muted">No hay productos con riesgo de agotarse en este período.</p>}
+          {salesRate.error ? <ErrorBlock message={salesRate.error} onRetry={() => void salesRate.reload()} /> : salesRate.loading ? <LoadingBlock /> : salesRate.data?.data.length ? <DataTable columns={salesRateColumns} rows={salesRate.data.data} rowKey={(row) => row.productId} rowHeight={48} /> : <p className="px-[20px] pb-[20px] text-[12px] text-muted">Aún no hay productos que lleguen al stock mínimo en los próximos {salesRate.data?.warningDays ?? 7} días al ritmo de sus salidas. Registra una salida para empezar el cálculo.</p>}
         </Card>
 
         <Card className="overflow-hidden">

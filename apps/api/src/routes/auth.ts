@@ -108,6 +108,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         },
       });
 
+      const warehouse = await prisma.warehouse.create({
+        data: { workspaceId, code: "PRINCIPAL", name: "Principal", location: "Principal", address: "", capacity: 100000, position: 1 },
+      });
+      await prisma.workspaceSetting.update({ where: { id: workspaceId }, data: { defaultWarehouseId: warehouse.id } });
+
       const created = await prisma.user.create({
         data: {
           email: cleanEmail,

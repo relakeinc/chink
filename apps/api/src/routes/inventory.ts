@@ -321,6 +321,20 @@ export const inventoryRoutes: FastifyPluginAsync = async (app: FastifyInstance) 
     } else {
       const prefs = await prisma.workspaceSetting.findUnique({ where: { id: ws }, select: { defaultWarehouseId: true } });
       warehouseId = prefs?.defaultWarehouseId ?? null;
+      if (!warehouseId) {
+        const first = await prisma.warehouse.findFirst({ where: { workspaceId: ws, active: true }, orderBy: { position: "asc" }, select: { id: true } });
+        if (first) warehouseId = first.id;
+        else {
+          const primary = await prisma.warehouse.upsert({
+            where: { workspaceId_code: { workspaceId: ws, code: "PRINCIPAL" } },
+            update: {},
+            create: { workspaceId: ws, code: "PRINCIPAL", name: "Principal", location: "Principal", address: "", capacity: 100000, position: 1 },
+            select: { id: true },
+          });
+          warehouseId = primary.id;
+        }
+        await prisma.workspaceSetting.update({ where: { id: ws }, data: { defaultWarehouseId: warehouseId } });
+      }
     }
 
     const maxPosition = await prisma.product.aggregate({ _max: { position: true }, where: { workspaceId: ws } });

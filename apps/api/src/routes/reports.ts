@@ -136,14 +136,20 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
     const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86_400_000));
     const [products, exits] = await Promise.all([
       prisma.product.findMany({ where: { workspaceId: ws, archived: false }, select: { id: true, sku: true, name: true, stock: true, minStock: true } }),
-      prisma.stockMovement.findMany({ where: { workspaceId: ws, type: "EXIT", createdAt: { gte: from, lte: to } }, select: { productId: true, quantity: true } }),
+      prisma.stockMovement.findMany({ where: { workspaceId: ws, type: "EXIT", createdAt: { gte: from, lte: to } }, select: { productId: true, quantity: true, createdAt: true } }),
     ]);
     const sold = new Map<string, number>();
-    for (const exit of exits) sold.set(exit.productId, (sold.get(exit.productId) ?? 0) + Math.abs(exit.quantity));
+    const firstSale = new Map<string, Date>();
+    for (const exit of exits) {
+      sold.set(exit.productId, (sold.get(exit.productId) ?? 0) + Math.abs(exit.quantity));
+      const first = firstSale.get(exit.productId);
+      if (!first || exit.createdAt < first) firstSale.set(exit.productId, exit.createdAt);
+    }
     const alerts = products
       .map((product) => {
         const unitsSold = sold.get(product.id) ?? 0;
-        const averageDaily = unitsSold / days;
+        const observedDays = Math.max(1, Math.ceil((to.getTime() - (firstSale.get(product.id)?.getTime() ?? to.getTime())) / 86_400_000));
+        const averageDaily = unitsSold / observedDays;
         const unitsUntilMinimum = Math.max(product.stock - product.minStock, 0);
         const daysToMinimum = averageDaily > 0 ? unitsUntilMinimum / averageDaily : null;
         return { productId: product.id, sku: product.sku, name: product.name, stock: product.stock, minStock: product.minStock, unitsSold, averageDaily, daysToMinimum };

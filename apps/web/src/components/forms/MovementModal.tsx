@@ -45,6 +45,15 @@ export default function MovementModal({ open, onClose, initialType = "ENTRY", in
     void api.getWarehouses().then((r) => setWarehouses(r.data)).catch(() => setWarehouses([]));
   }, [open ]);
 
+  useEffect(() => {
+    if (!open || warehouses.length === 0) return;
+    const productWarehouse = products.find((item) => item.id === productId)?.warehouse;
+    const preferred = warehouses.find((item) => item.name === productWarehouse) ?? warehouses[0];
+    if (!preferred) return;
+    if (needsOrigin && !originId) setOriginId(preferred.id);
+    if (type === "ENTRY" && !destinationId) setDestinationId(preferred.id);
+  }, [open, warehouses, products, productId, type, originId, destinationId]);
+
   // Al abrir, parte del tipo y producto iniciales (no conserva la vez anterior).
   useEffect(() => {
     if (!open) return;
